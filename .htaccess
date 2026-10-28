@@ -1,0 +1,6 @@
+# Open the app when the folder itself is requested (e.g. http://localhost/webdes/).
+# main.php redirects to login.php when no one is logged in.
+DirectoryIndex main.php login.php
+
+# Don't show a file listing for folders that have no index file.
+Options -Indexes

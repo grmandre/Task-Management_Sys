@@ -1,0 +1,63 @@
+  
+  @import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
+
+  
+  body {
+            font-family: 'Figtree', sans-serif;
+        }
+
+        .login-wrapper {
+        max-width: 100%;
+    min-height: 100vh;
+    background: 
+        url("assets/bg.jpg");
+    background-size: cover;
+}
+
+        .login-card {
+            background-color: #000;
+            color: #fff;
+            align-items: center;
+            max-width: 400px;
+            margin: auto;
+        }
+
+        .login-card .form-control {
+            background-color: #000;
+            color: #fff;
+            width: 250px;
+            
+        }
+
+        .login-card .form-control:focus {
+            background-color: #fff;
+            color: #000;
+            border-color: #555;
+            box-shadow: none;
+        }
+
+        .login-card .btn-primary {
+            background-color: #fff;
+            color: #000;
+            border: none;
+            
+        }
+
+        .login-card .btn-primary:hover {
+            background-color: #e6e6e6;
+        }
+
+        .login-card a {
+            color: #aaa;
+        }
+
+        .login-card a:hover {
+            color: #fff;
+        }
+        #login-button {
+            background-color: #fff;
+            color: #000;
+            border: none;
+            width: 200px;
+            
+        }

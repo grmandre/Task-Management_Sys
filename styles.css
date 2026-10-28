@@ -1,0 +1,164 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
+
+
+body {
+    font-family: 'Figtree', sans-serif;
+}
+li {
+    list-style: none;
+}
+a{
+    text-decoration: none;
+}
+.main{
+    min-height: 100vh;
+    width: 100%;
+    min-width: 0;
+    /* clip (not hidden) so .main doesn't become a scroll container — that would break the sticky navbar */
+    overflow-x: clip;
+    background-color: #f9f9f9;
+}
+#sidebar{
+    max-width: 264px;
+    min-width: 264px;
+    display: flex;
+    transition: all 0.3s ease-in-out;
+    background-color: #000;
+    flex-direction: column;
+    /* Pin the sidebar to the viewport so the logout footer stays visible on long pages */
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    align-self: flex-start;
+}
+/* Menu scrolls inside the sidebar if it's taller than the screen; footer stays put */
+.sidebar-nav{
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+#sidebar.collapsed{
+    max-width: 65px;
+    min-width: 65px;
+}   
+
+
+#sidebar.collapsed .sidebar-link[data-bs-toggle]::after{
+    display: none;
+}
+#sidebar.collapsed .sidebar-link span,
+#sidebar.collapsed .sidebar-header,
+#sidebar.collapsed .data-bs-toggle{
+    display: none;
+
+}
+
+
+.sidebar-footer{
+    margin-top: auto;
+    flex-shrink: 0;
+    border-top: 1px solid #ffffff20;
+}
+.toggler-btn{
+    background-color: transparent;
+    cursor: pointer;
+    border: 0;
+    border-radius: .5rem;
+    padding: .25rem .5rem;
+    line-height: 1;
+    transition: background-color .2s;
+}
+.toggler-btn:hover{
+    background-color: #0000000d;
+}
+.toggler-btn:focus-visible{
+    outline: 2px solid #212529;
+    outline-offset: 2px;
+}
+.toggler-btn i{
+    font-size: 1.5rem;
+    color: #000;
+    font-weight: bold;
+}
+.navbar{
+    padding: 1.15rem 1.5rem;
+    /* Keep the top bar visible while the page scrolls */
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background-color: #f9f9f9;
+}
+
+.sidebar-logo{
+    padding: 1.15rem 1.5rem;
+    text-align: center;
+}
+
+.sidebar-logo a {
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.25rem;
+}
+.sidebar-header{
+    color: #fff;
+    font-size:  .75rem;
+    padding: 1.5rem 1.5rem .375rem;
+}
+#auth{
+     color: #fff;
+    font-size:  .80rem;
+    padding-left: 1rem;
+}
+a.sidebar-link{
+    padding: .625rem 1.625rem;
+    color: #fff;
+    position: relative;
+    transition: all 0.35s;
+    display: block;
+
+}
+a.sidebar-link:hover{
+    background-color: #f9f6f630;
+
+}
+/* Current page */
+a.sidebar-link.active{
+    background-color: #f9f6f630;
+    box-shadow: inset 3px 0 0 #fff;
+    font-weight: 600;
+}
+
+.sidebar-link[data-bs-toggle="collapse"]::after{
+   border: solid;
+   border-width: 0 .1rem .1rem 0;
+   content: '';
+   display: inline-block;
+   padding: 2px;
+   position: absolute;
+    right: 1.5rem;
+    top: .8rem;
+    transform: rotate(-135deg);
+    transition: all .2s ease-out;
+
+}
+
+.sidebar-link[data-bs-toggle="collapse"].collapsed::after{
+    transform: rotate(45deg);
+    transition: all .2s ease-out;
+}
+
+@media (max-width: 768px) {
+  .sidebar-toggle{
+    margin-left: 0px;
+  }
+  #sidebar.collapsed{
+    margin-left: 0;
+  }
+}
+#sidebar.collapsed .sidebar-dropdown{
+    display: none;
+}
+
+#sidebar.collapsed .sidebar-logo{
+    padding: 1.0rem 0;
+}
