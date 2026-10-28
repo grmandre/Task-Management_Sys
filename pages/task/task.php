@@ -27,7 +27,7 @@ $result = $stmt->get_result();
 ?>
 
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h4 class="fw-bold mb-0">My Tasks</h4>
             <small class="text-muted"><?= $result->num_rows ?> task<?= $result->num_rows === 1 ? '' : 's' ?></small>
@@ -48,7 +48,7 @@ $result = $stmt->get_result();
             <?php else: ?>
 
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 table-stack">
                         <thead class="table-light">
                             <tr>
                                 <th class="ps-4">Title</th>
@@ -103,19 +103,19 @@ $result = $stmt->get_result();
                                     </small>
                                 </td>
 
-                                <td>
+                                <td data-label="Priority">
                                     <span class="badge <?= $priorityClass ?>">
                                         <?= htmlspecialchars($task['priority']) ?>
                                     </span>
                                 </td>
 
-                                <td>
+                                <td data-label="Start Date">
                                     <?= $task['start_date']
                                         ? '<span class="text-muted">' . date('M d, Y', strtotime($task['start_date'])) . '</span>'
                                         : '<span class="text-muted">—</span>' ?>
                                 </td>
 
-                                <td>
+                                <td data-label="Due">
                                     <?php if ($task['due_date']): ?>
                                         <span class="<?= $overdue ? 'text-danger fw-semibold' : 'text-muted' ?>">
                                             <?= date('M d, Y', strtotime($task['due_date'])) ?>
@@ -129,13 +129,13 @@ $result = $stmt->get_result();
                                     <?php endif; ?>
                                 </td>
 
-                                <td>
+                                <td data-label="Status">
                                     <span class="badge <?= $statusClass ?>">
                                         <?= htmlspecialchars($task['status'] ?? 'Pending') ?>
                                     </span>
                                 </td>
 
-                                <td class="text-end pe-4 text-nowrap">
+                                <td class="text-end pe-4 text-nowrap cell-actions">
                                     <a href="main.php?page=tasks_edit&id=<?= $task['id'] ?>"
                                        class="btn btn-sm btn-outline-dark">
                                         Edit

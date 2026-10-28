@@ -36,7 +36,13 @@ session_start();
 
                         <div class="mb-3">
                             <label class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" >
+                            <div class="password-field">
+                                <input type="password" name="password" class="form-control" >
+                                <button type="button" class="password-eye" onclick="TOGGLE_PASSWORD(this);"
+                                        title="Show password" aria-label="Show password" aria-pressed="false">
+                                    <i class="lni lni-eye"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="d-grid mb-4">
@@ -63,6 +69,17 @@ session_start();
 </div>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.20/dist/sweetalert2.all.min.js"></script>
 <script>
+    // Eye button next to the password field: shows / hides what was typed (same as script.js)
+    function TOGGLE_PASSWORD(btn) {
+        const input = btn.parentElement.querySelector('input');
+        const show  = input.type === 'password';
+        input.type  = show ? 'text' : 'password';
+        btn.classList.toggle('active', show);
+        btn.setAttribute('aria-pressed', show);
+        btn.title = show ? 'Hide password' : 'Show password';
+        btn.setAttribute('aria-label', btn.title);
+    }
+
     document.getElementById('FORGOT_LINK').addEventListener('click', function (e) {
         e.preventDefault();
         Swal.fire({

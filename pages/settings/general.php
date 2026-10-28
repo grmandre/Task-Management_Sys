@@ -69,7 +69,7 @@ $settings_tab = 'general';
                 <!-- Account details -->
                 <div class="col-12 col-md-5">
                     <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-body p-4">
+                        <div class="card-body p-3 p-md-4">
                             <h6 class="fw-bold mb-3 text-uppercase text-muted">Account</h6>
 
                             <dl class="row small mb-0">
@@ -113,7 +113,7 @@ $settings_tab = 'general';
                 <!-- Recent activity -->
                 <div class="col-12 col-md-7">
                     <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-body p-4">
+                        <div class="card-body p-3 p-md-4">
                             <h6 class="fw-bold mb-3 text-uppercase text-muted">Recent Activity</h6>
 
                             <?php if (!$activity): ?>

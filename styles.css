@@ -147,12 +147,60 @@ a.sidebar-link.active{
     transition: all .2s ease-out;
 }
 
-@media (max-width: 768px) {
-  .sidebar-toggle{
-    margin-left: 0px;
-  }
+.sidebar-backdrop{
+    display: none;
+}
+
+/* ── Phones: sidebar becomes a slide-in drawer (toggled by script.js) ── */
+@media (max-width: 767.98px) {
+  #sidebar,
   #sidebar.collapsed{
-    margin-left: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1045;
+    height: 100vh;
+    height: 100dvh;
+    max-width: min(264px, 85vw);
+    min-width: min(264px, 85vw);
+    transform: translateX(-100%);
+    visibility: hidden;   /* keeps off-screen links out of the Tab order */
+  }
+  #sidebar.mobile-open{
+    transform: none;
+    visibility: visible;
+    box-shadow: 0 0 2rem #00000059;
+  }
+  .sidebar-backdrop{
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1040;
+    background-color: #00000073;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .3s, visibility .3s;
+  }
+  .sidebar-backdrop.show{
+    opacity: 1;
+    visibility: visible;
+  }
+  /* Page behind the open drawer shouldn't scroll */
+  body.sidebar-open{
+    overflow: hidden;
+  }
+  a.sidebar-link{
+    padding: .75rem 1.5rem;
+  }
+
+  .navbar{
+    padding: .75rem 1rem;
+  }
+
+  /* 16px inputs stop iOS Safari from zooming in when a field is focused */
+  .main .form-control,
+  .main .form-select{
+    font-size: 1rem;
   }
 }
 #sidebar.collapsed .sidebar-dropdown{
@@ -171,4 +219,84 @@ a.sidebar-link.active{
 .form-check-input:focus{
     border-color: #212529;
     box-shadow: 0 0 0 .2rem #21252940;
+}
+
+/* Password input with an eye icon inside it (TOGGLE_PASSWORD in script.js) */
+.password-field{
+    position: relative;
+}
+.password-field .form-control{
+    padding-right: 2.5rem;
+}
+.password-eye{
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #adb5bd;
+}
+/* Darker while the password is showing */
+.password-eye:hover,
+.password-eye.active{
+    color: #212529;
+}
+
+/* ── Tables that turn into one card per row on phones ──
+   Add .table-stack to the <table>, data-label="…" to each value cell,
+   and .cell-actions to the buttons cell. Cells without a label (the title) span the row. */
+@media (max-width: 767.98px) {
+    .table-stack thead{
+        display: none;
+    }
+    .table-stack,
+    .table-stack tbody,
+    .table-stack tr{
+        display: block;
+        width: 100%;
+    }
+    .table-stack tr{
+        padding: .75rem 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .table-stack tr:last-child{
+        border-bottom: 0;
+    }
+    .table-stack > :not(caption) > * > *{
+        display: flow-root;
+        border-bottom-width: 0;
+        padding: .2rem 0 !important;
+        max-width: none !important;
+        /* Bootstrap's hover tint is per cell and would leave the row padding unshaded */
+        box-shadow: none;
+    }
+    .table-stack td[data-label]{
+        text-align: right !important;
+    }
+    .table-stack td[data-label]::before{
+        content: attr(data-label);
+        float: left;
+        margin-right: 1rem;
+        color: #6c757d;
+        font-size: .8125rem;
+        font-weight: 400;
+        line-height: 1.5rem;   /* sits on the same line as the value */
+    }
+    /* "No results" rows */
+    .table-stack td[colspan]{
+        padding: 1rem 0 !important;
+    }
+    .table-stack td.cell-actions{
+        display: flex;
+        flex-wrap: wrap;
+        gap: .375rem;
+        padding-top: .5rem !important;
+        white-space: normal !important;
+    }
 }

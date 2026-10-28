@@ -2,7 +2,7 @@
 // Shared header + tabs for the settings pages. Expects $settings_tab = 'general' | 'security'.
 $settings_tab = $settings_tab ?? 'general';
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h4 class="fw-bold mb-0">Settings</h4>
         <small class="text-muted">Manage your account and security</small>

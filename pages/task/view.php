@@ -63,7 +63,7 @@ if ($task) {
     <div class="row justify-content-center py-4">
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-5 text-center">
+                <div class="card-body p-4 p-md-5 text-center">
                     <i class="lni lni-search-1 fs-1 text-muted"></i>
                     <h6 class="fw-bold mt-3">Task not found</h6>
                     <p class="text-muted small">It may have been deleted, or it belongs to another user.</p>

@@ -21,7 +21,7 @@ $tasks_json = json_encode($tasks, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
 <div class="container-fluid py-4">
 
     <!-- Page header -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h4 class="fw-bold mb-0">Calendar</h4>
             <small class="text-muted">View and manage tasks by due date</small>
@@ -38,14 +38,16 @@ $tasks_json = json_encode($tasks, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
             <button id="VIEW_WEEK"  class="btn btn-outline-dark" onclick="CAL.setView('week')">Week</button>
             <button id="VIEW_DAY"   class="btn btn-outline-dark" onclick="CAL.setView('day')">Day</button>
         </div>
-        <button class="btn btn-sm btn-outline-dark px-3" onclick="CAL.navigate(-1)">&#8249;</button>
-        <span id="CAL_LABEL" class="fw-semibold text-center" style="min-width:200px"></span>
-        <button class="btn btn-sm btn-outline-dark px-3" onclick="CAL.navigate(1)">&#8250;</button>
-        <button class="btn btn-sm btn-outline-secondary"  onclick="CAL.goToday()">Today</button>
+        <div class="cal-nav d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-dark px-3" onclick="CAL.navigate(-1)" aria-label="Previous">&#8249;</button>
+            <span id="CAL_LABEL" class="fw-semibold text-center cal-label"></span>
+            <button class="btn btn-sm btn-outline-dark px-3" onclick="CAL.navigate(1)" aria-label="Next">&#8250;</button>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary cal-today" onclick="CAL.goToday()">Today</button>
     </div>
 
     <!-- Legend -->
-    <div class="d-flex gap-3 mb-3">
+    <div class="d-flex flex-wrap gap-3 mb-3">
         <span class="d-flex align-items-center gap-1 small text-muted">
             <span class="cal-dot dot-pending"></span> Pending
         </span>
@@ -144,6 +146,27 @@ $tasks_json = json_encode($tasks, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
 
 /* ── DAY VIEW ───────────────────────────────────────────────── */
 .day-view-title  { font-size:1.1rem; font-weight:700; border-bottom:1px solid #f0f0f0; padding-bottom:10px; margin-bottom:12px; }
+
+/* ── Toolbar label ──────────────────────────────────────────── */
+.cal-label { min-width:200px; }
+#CAL_PANEL_COL { scroll-margin-top:5rem; }   /* clear the sticky navbar when scrolled into view */
+
+/* ── Phones ─────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    /* Arrows + label get their own full-width row under the view buttons; label fills the gap */
+    .cal-nav   { order:1; flex:1 1 100%; }
+    .cal-label { min-width:0; flex:1 1 auto; }
+    .cal-today { margin-left:auto; }
+    .cal-month-grid  { gap:2px; }
+    .cal-day         { min-height:48px; padding:5px 3px 3px; border-radius:6px; }
+    .cal-dot         { width:6px; height:6px; }
+    /* Week view becomes a vertical agenda: one row per day */
+    .cal-week-grid   { grid-template-columns:1fr; overflow-x:visible; }
+    .cal-week-col    { display:flex; min-width:0; }
+    .cal-week-hdr    { flex:0 0 64px; border-bottom:0; border-right:1px solid #f0f0f0; }
+    .cal-week-tasks  { flex:1 1 auto; min-width:0; min-height:0; padding:8px 10px; }
+    .cal-task-chip .chip-title { font-size:.8rem; }
+}
 </style>
 
 <script>
@@ -333,6 +356,7 @@ window.CAL = (function () {
                 selectedDate = key;
                 render();
                 showPanel(dt);
+                revealPanel();
             });
         }
         return cell;
@@ -396,6 +420,7 @@ window.CAL = (function () {
                 viewDate     = new Date(dt);
                 render();
                 showPanel(dt);
+                revealPanel();
             });
 
             grid.appendChild(col);
@@ -428,6 +453,13 @@ window.CAL = (function () {
             <a href="main.php?page=tasks_create&due=${key}" class="btn btn-sm btn-outline-dark mt-3">
                 <i class="lni lni-plus"></i> Add Task
             </a>`;
+    }
+
+    /* On phones the panel sits below the calendar, so bring it into view after a tap */
+    function revealPanel() {
+        if (window.matchMedia('(max-width: 991.98px)').matches) {
+            document.getElementById('CAL_PANEL_COL').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     /* ── Side panel (month + week views) ───────────────────────────────────── */

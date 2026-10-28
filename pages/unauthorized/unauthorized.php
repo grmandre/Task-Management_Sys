@@ -8,7 +8,7 @@ $is_404     = $error_code === 404;
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-5">
             <div class="card shadow-sm border-0 rounded-4 text-center">
-                <div class="card-body p-5">
+                <div class="card-body p-4 p-md-5">
                     <div class="rounded-circle bg-dark text-white d-inline-flex align-items-center justify-content-center mb-3"
                          style="width:72px;height:72px;">
                         <i class="lni <?= $is_404 ? 'lni-search-1' : 'lni-locked-2' ?> fs-2"></i>

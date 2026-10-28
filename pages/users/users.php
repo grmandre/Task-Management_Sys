@@ -7,7 +7,7 @@ include_once 'db/db.php';
 $user_id = (int)$_SESSION['user_id'];
 
 $all_users = $conn->query("
-    SELECT id, username, role, status, last_login, created_at,
+    SELECT id, username, role,default_password, status, last_login, created_at,
            first_name, middle_name, last_name, phone, avatar
     FROM vw_user
     ORDER BY role = 'Admin' DESC, first_name, last_name
@@ -22,7 +22,7 @@ $avatar_url = fn($u) => !empty($u['avatar']) && is_file('uploads/avatars/' . $u[
 
 <div class="container-fluid">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h4 class="fw-bold mb-0">Users</h4>
             <small class="text-muted">
@@ -41,18 +41,18 @@ $avatar_url = fn($u) => !empty($u['avatar']) && is_file('uploads/avatars/' . $u[
                 <input type="search"
                        id="USER_SEARCH"
                        class="form-control form-control-sm"
-                       style="max-width:280px;"
+                       style="max-width:min(280px, 100%);"
                        placeholder="Search by name, username, role..."
                        oninput="FILTER_USERS(this.value);">
             </div>
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 table-stack">
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">User</th>
                             <th>Username</th>
-                            <th>Phone</th>
+                            <th>Default Password</th>
                             <th>Role</th>
                             <th>Status</th>
                             <th>Last Login</th>
@@ -86,17 +86,17 @@ $avatar_url = fn($u) => !empty($u['avatar']) && is_file('uploads/avatars/' . $u[
                                     </div>
                                 </div>
                             </td>
-                            <td><?= htmlspecialchars($u['username']) ?></td>
-                            <td class="text-muted"><?= htmlspecialchars($u['phone'] ?? '') ?: '—' ?></td>
-                            <td>
+                            <td data-label="Username"><?= htmlspecialchars($u['username']) ?></td>
+                            <td data-label="Default Password" class="text-muted"><?= htmlspecialchars($u['default_password'] ?? '') ?: '—' ?></td>
+                            <td data-label="Role">
                                 <span class="badge <?= $u['role'] === 'Admin' ? 'bg-dark' : 'bg-secondary' ?>"><?= htmlspecialchars($u['role']) ?></span>
                             </td>
-                            <td><span class="badge <?= $status_class ?>"><?= htmlspecialchars($u['status']) ?></span></td>
-                            <td class="text-muted small">
+                            <td data-label="Status"><span class="badge <?= $status_class ?>"><?= htmlspecialchars($u['status']) ?></span></td>
+                            <td data-label="Last Login" class="text-muted small">
                                 <?= $u['last_login'] ? date('M j, Y g:i A', strtotime($u['last_login'])) : 'Never' ?>
                             </td>
-                            <td class="text-muted small"><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
-                            <td class="text-end pe-4 text-nowrap">
+                            <td data-label="Joined" class="text-muted small"><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
+                            <td class="text-end pe-4 text-nowrap cell-actions">
                                 <a href="main.php?page=users_edit&id=<?= (int)$u['id'] ?>"
                                    class="btn btn-sm btn-outline-dark">
                                     <i class="lni lni-pencil-1 me-1"></i> Edit

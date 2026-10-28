@@ -96,7 +96,7 @@ $stmt->close();
 <div class="container-fluid">
 
     <!-- ── Header ── -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h4 class="fw-bold mb-0"><?= $greeting ?>, <?= htmlspecialchars($first_name) ?>.</h4>
             <small class="text-muted"><?= date('l, F j, Y') ?></small>
@@ -120,7 +120,7 @@ $stmt->close();
 
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-body d-flex align-items-center gap-3">
+                <div class="card-body d-flex align-items-center gap-2 gap-sm-3">
                     <div class="rounded-3 bg-dark text-white p-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
                         <i class="lni lni-agenda fs-5"></i>
                     </div>
@@ -134,7 +134,7 @@ $stmt->close();
 
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-body d-flex align-items-center gap-3">
+                <div class="card-body d-flex align-items-center gap-2 gap-sm-3">
                     <div class="rounded-3 bg-secondary text-white p-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
                         <i class="lni lni-hourglass fs-5"></i>
                     </div>
@@ -148,7 +148,7 @@ $stmt->close();
 
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-body d-flex align-items-center gap-3">
+                <div class="card-body d-flex align-items-center gap-2 gap-sm-3">
                     <div class="rounded-3 text-white p-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:#ffc107;">
                         <i class="lni lni-reload fs-5 text-dark"></i>
                     </div>
@@ -162,7 +162,7 @@ $stmt->close();
 
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-body d-flex align-items-center gap-3">
+                <div class="card-body d-flex align-items-center gap-2 gap-sm-3">
                     <div class="rounded-3 text-white p-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:#198754;">
                         <i class="lni lni-checkmark-circle fs-5"></i>
                     </div>
@@ -207,7 +207,7 @@ $stmt->close();
 
         <div class="col-md-4">
             <div class="card border-0 shadow-sm rounded-3 h-100" style="border-left:4px solid #dc3545!important;">
-                <div class="card-body d-flex align-items-center gap-3">
+                <div class="card-body d-flex align-items-center gap-2 gap-sm-3">
                     <div class="rounded-3 bg-danger text-white p-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
                         <i class="lni lni-alarm-1 fs-5"></i>
                     </div>
@@ -229,7 +229,7 @@ $stmt->close();
             <div class="card border-0 shadow-sm rounded-3">
                 <div class="card-body p-0">
 
-                    <div class="d-flex justify-content-between align-items-center px-4 pt-4 pb-3">
+                    <div class="d-flex justify-content-between align-items-center px-3 px-md-4 pt-3 pt-md-4 pb-3">
                         <h6 class="fw-bold mb-0">Recent Tasks</h6>
                         <a href="main.php?page=task" class="btn btn-sm btn-outline-dark">View All</a>
                     </div>
@@ -241,7 +241,7 @@ $stmt->close();
                         </div>
                     <?php else: ?>
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-hover align-middle mb-0 table-stack">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="ps-4">Task</th>
@@ -275,8 +275,8 @@ $stmt->close();
                                             Added <?= date('M j', strtotime($t['created_at'])) ?>
                                         </small>
                                     </td>
-                                    <td><span class="badge <?= $pc ?>"><?= $t['priority'] ?></span></td>
-                                    <td>
+                                    <td data-label="Priority"><span class="badge <?= $pc ?>"><?= $t['priority'] ?></span></td>
+                                    <td data-label="Due">
                                         <?php if ($t['due_date']): ?>
                                             <span class="<?= $overdue ? 'text-danger fw-semibold' : 'text-muted' ?>">
                                                 <?= date('M j, Y', strtotime($t['due_date'])) ?>
@@ -286,7 +286,7 @@ $stmt->close();
                                             <span class="text-muted">—</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><span class="badge <?= $sc ?>"><?= htmlspecialchars($t['status']) ?></span></td>
+                                    <td data-label="Status"><span class="badge <?= $sc ?>"><?= htmlspecialchars($t['status']) ?></span></td>
                                 </tr>
                                 <?php endforeach; ?>
                                 </tbody>
@@ -327,7 +327,7 @@ $stmt->close();
                         ?>
                         <li class="mb-3 pb-3 border-bottom">
                             <div class="d-flex justify-content-between align-items-start">
-                                <span class="fw-semibold text-truncate me-2" style="max-width:160px;" title="<?= htmlspecialchars($u['title']) ?>">
+                                <span class="fw-semibold text-truncate me-2" style="min-width:0;" title="<?= htmlspecialchars($u['title']) ?>">
                                     <?= htmlspecialchars($u['title']) ?>
                                 </span>
                                 <span class="badge <?= $pc ?> flex-shrink-0"><?= $u['priority'] ?></span>

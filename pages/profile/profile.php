@@ -36,7 +36,7 @@ $avatar_src = $avatar_url($user);
         <div class="col-12 col-lg-7">
 
             <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
                 <div>
                     <h4 class="fw-bold mb-0">My Profile</h4>
                     <small class="text-muted">Manage your personal information</small>
@@ -47,7 +47,7 @@ $avatar_src = $avatar_url($user);
             </div>
 
             <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-4">
+                <div class="card-body p-3 p-md-4">
 
                     <form method="POST"
                           action="handlers/update_profile_handler.php"
@@ -151,11 +151,14 @@ $avatar_src = $avatar_url($user);
                         </div>
 
                         <!-- Password Section -->
-                        <div class="bg-light p-3 rounded-3 mb-4 d-flex align-items-center gap-3">
-                            <i class="lni lni-locked-2 fs-4"></i>
-                            <div class="flex-grow-1">
-                                <h6 class="fw-bold mb-0">Password</h6>
-                                <small class="text-muted">Change your password from the security settings.</small>
+                        <!-- On phones the button drops below the text instead of squeezing it -->
+                        <div class="bg-light p-3 rounded-3 mb-4 d-flex flex-wrap align-items-center gap-3">
+                            <div class="d-flex align-items-center gap-3" style="flex:1 1 15rem;">
+                                <i class="lni lni-locked-2 fs-4"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-0">Password</h6>
+                                    <small class="text-muted">Change your password from the security settings.</small>
+                                </div>
                             </div>
                             <a href="main.php?page=settings_security" class="btn btn-sm btn-outline-dark">Change Password</a>
                         </div>

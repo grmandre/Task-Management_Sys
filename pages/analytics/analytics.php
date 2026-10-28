@@ -304,14 +304,14 @@ $OUTCOMES = [
     <!-- Per-user tendencies -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body p-0">
-            <div class="p-4 pb-3">
+            <div class="p-3 p-md-4 pb-3 pb-md-3">
                 <h6 class="fw-bold mb-0">User tendencies</h6>
                 <small class="text-muted">
                     Based on tasks made <?= strtolower($RANGES[$days]) ?>. A tendency needs at least 3 tasks.
                 </small>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 table-stack">
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">User</th>
@@ -340,14 +340,14 @@ $OUTCOMES = [
                                 </a>
                                 <div class="small text-muted"><?= htmlspecialchars($u['username']) ?></div>
                             </td>
-                            <td class="text-end"><?= $ut ?></td>
-                            <td class="text-end"><?= $uc ?> <span class="text-muted small">(<?= $fmt_pct($pct($uc, $ut)) ?>)</span></td>
-                            <td class="text-end"><?= (int)$u['late'] ?></td>
-                            <td class="text-end"><?= (int)$u['overdue'] ?></td>
-                            <td class="text-end"><?= (int)$u['dropped'] ?></td>
-                            <td class="text-end"><?= $fmt_days($uc > 0 ? (float)$u['avg_days'] : null) ?></td>
-                            <td class="text-end"><?= (int)$u['active_days'] ?></td>
-                            <td class="pe-4"><span class="badge <?= $class ?>"><i class="lni <?= $icon ?> me-1"></i><?= $label ?></span></td>
+                            <td data-label="Tasks made" class="text-end"><?= $ut ?></td>
+                            <td data-label="Completed" class="text-end"><?= $uc ?> <span class="text-muted small">(<?= $fmt_pct($pct($uc, $ut)) ?>)</span></td>
+                            <td data-label="Completed late" class="text-end"><?= (int)$u['late'] ?></td>
+                            <td data-label="Overdue" class="text-end"><?= (int)$u['overdue'] ?></td>
+                            <td data-label="Dropped" class="text-end"><?= (int)$u['dropped'] ?></td>
+                            <td data-label="Avg. time to finish" class="text-end"><?= $fmt_days($uc > 0 ? (float)$u['avg_days'] : null) ?></td>
+                            <td data-label="Active days" class="text-end"><?= (int)$u['active_days'] ?></td>
+                            <td data-label="Tendency" class="pe-4"><span class="badge <?= $class ?>"><i class="lni <?= $icon ?> me-1"></i><?= $label ?></span></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -372,6 +372,10 @@ $OUTCOMES = [
 .analytics .meter-fill  { height: 100%; border-radius: 3px; }
 .analytics .data-table  { max-height: 240px; overflow-y: auto; }
 .analytics details summary { cursor: pointer; }
+@media (max-width: 575.98px) {
+    .analytics .stat-value { font-size: 1.5rem; }
+    .analytics .chart-box  { height: 200px; }
+}
 </style>
 
 <script src="assets/plugins/chartjs/chart.min.js"></script>

@@ -21,7 +21,7 @@ $ACTION  = intval($_POST['ACTION'] ?? 0);
 if ($ACTION == 1) {
     $CURRENT = $_POST['CURRENT_PASSWORD'] ?? '';
     $NEW_PW  = $_POST['NEW_PASSWORD']     ?? '';
-
+    
     if ($CURRENT === '' || strlen($NEW_PW) < 6) {
         respond('error', 'Current password is required and the new password must be at least 6 characters.');
     }
@@ -38,7 +38,9 @@ if ($ACTION == 1) {
         respond('error', 'New password must be different from the current one.');
     }
 
-    $stmt = $GLOBALS['db']->prepare('UPDATE tbl_account SET password = ?, must_change_password = 0 WHERE id = ?');
+    
+
+    $stmt = $GLOBALS['db']->prepare('UPDATE tbl_account SET password = ?, default_password = null, must_change_password = 0 WHERE id = ?');
     $stmt->execute([password_hash($NEW_PW, PASSWORD_DEFAULT), $USER_ID]);
 
     log_activity($USER_ID, 'password_changed', $USER_ID);

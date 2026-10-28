@@ -90,7 +90,7 @@ $remind      = $task['remind_before'] ?? null;
     <div class="row justify-content-center">
         <div class="col-12 col-lg-8">
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
                 <div>
                     <h4 class="fw-bold mb-0"><?= $IS_EDIT ? 'Edit Task' : 'Create Task' ?></h4>
                     <small class="text-muted">
@@ -109,7 +109,7 @@ $remind      = $task['remind_before'] ?? null;
             <?php if ($not_found): ?>
 
             <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-5 text-center">
+                <div class="card-body p-4 p-md-5 text-center">
                     <i class="lni lni-search-1 fs-1 text-muted"></i>
                     <h6 class="fw-bold mt-3">Task not found</h6>
                     <p class="text-muted small">It may have been deleted, or it belongs to another user.</p>
@@ -142,7 +142,7 @@ $remind      = $task['remind_before'] ?? null;
             <?php endif; ?>
 
             <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-4">
+                <div class="card-body p-3 p-md-4">
 
                     <form id="TASK_FORM" onsubmit="SAVE_TASK(); return false;">
                         <input type="hidden" id="TASK_ID" value="<?= $IS_EDIT ? (int)$task['id'] : 0 ?>">
@@ -251,7 +251,7 @@ $remind      = $task['remind_before'] ?? null;
 
                             <div class="col-12 repeat-weekly">
                                 <label class="form-label small fw-semibold d-block">On these days</label>
-                                <div class="d-flex flex-wrap gap-1" id="WEEKDAY_PICKER">
+                                <div class="weekday-grid" id="WEEKDAY_PICKER">
                                     <?php foreach (WEEKDAYS as $n => $name): ?>
                                         <input type="checkbox" class="btn-check" id="WD_<?= $n ?>" value="<?= $n ?>" autocomplete="off"
                                             <?= $repeat_type === 'weekly' && in_array($n, $repeat_days, true) ? 'checked' : '' ?>>
@@ -353,9 +353,15 @@ $remind      = $task['remind_before'] ?? null;
 </div>
 
 <style>
+.weekday-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 .day-chip { min-width: 52px; }
 .month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; max-width: 380px; }
 .month-grid .btn { padding: .25rem 0; }
+/* Phones: weekdays in one row of 7, like the month grid below */
+@media (max-width: 575.98px) {
+    .weekday-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); max-width: 380px; }
+    .day-chip { min-width: 0; padding-left: 0; padding-right: 0; }
+}
 </style>
 
 <script src="pages/create/script.js"></script>

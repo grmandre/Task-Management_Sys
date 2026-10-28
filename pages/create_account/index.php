@@ -33,7 +33,7 @@ $avatar_src = $acct && !empty($acct['avatar']) && is_file('uploads/avatars/' . $
     <div class="row justify-content-center">
         <div class="col-12 col-lg-7">
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
                 <div>
                     <small class="text-muted">
                         <a href="main.php?page=users" class="text-muted">Users</a> / <?= $IS_EDIT ? 'Edit User' : 'Create Account' ?>
@@ -51,7 +51,7 @@ $avatar_src = $acct && !empty($acct['avatar']) && is_file('uploads/avatars/' . $
             <?php if ($IS_EDIT && !$acct): ?>
 
             <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-5 text-center">
+                <div class="card-body p-4 p-md-5 text-center">
                     <i class="lni lni-search-1 fs-1 text-muted"></i>
                     <h6 class="fw-bold mt-3">User not found</h6>
                     <p class="text-muted small">This account may have been removed.</p>
@@ -62,7 +62,7 @@ $avatar_src = $acct && !empty($acct['avatar']) && is_file('uploads/avatars/' . $
             <?php else: ?>
 
             <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-4">
+                <div class="card-body p-3 p-md-4">
                     <form id="MY_FORM" enctype="multipart/form-data" onsubmit="SUBMIT_BTN(); return false;">
                         <input type="hidden" id="USER_ID" value="<?= $IS_EDIT ? (int)$acct['id'] : 0 ?>">
 
@@ -211,21 +211,33 @@ $avatar_src = $acct && !empty($acct['avatar']) && is_file('uploads/avatars/' . $
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label small"><?= $IS_EDIT ? 'New Password' : 'Password <span class="text-danger">*</span>' ?></label>
-                                    <input type="password"
-                                           name="password"
-                                           class="form-control"
-                                           id="PASSWORD"
-                                           autocomplete="new-password"
-                                           placeholder="Minimum 6 characters"
-                                           minlength="6">
+                                    <div class="password-field">
+                                        <input type="password"
+                                               name="password"
+                                               class="form-control"
+                                               id="PASSWORD"
+                                               autocomplete="new-password"
+                                               placeholder="Minimum 6 characters"
+                                               minlength="6">
+                                        <button type="button" class="password-eye" onclick="TOGGLE_PASSWORD(this);"
+                                                title="Show password" aria-label="Show password" aria-pressed="false">
+                                            <i class="lni lni-eye"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small"><?= $IS_EDIT ? 'Confirm New Password' : 'Confirm Password <span class="text-danger">*</span>' ?></label>
-                                    <input type="password"
-                                           class="form-control"
-                                           id="CONFIRM_PASSWORD"
-                                           autocomplete="new-password"
-                                           placeholder="Re-enter password">
+                                    <div class="password-field">
+                                        <input type="password"
+                                               class="form-control"
+                                               id="CONFIRM_PASSWORD"
+                                               autocomplete="new-password"
+                                               placeholder="Re-enter password">
+                                        <button type="button" class="password-eye" onclick="TOGGLE_PASSWORD(this);"
+                                                title="Show password" aria-label="Show password" aria-pressed="false">
+                                            <i class="lni lni-eye"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

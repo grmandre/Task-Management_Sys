@@ -29,6 +29,39 @@
             
         }
 
+        /* Password input with an eye icon inside it */
+        .login-card .password-field {
+            position: relative;
+            width: fit-content;
+        }
+        .login-card .password-field .form-control {
+            padding-right: 2.5rem;
+        }
+        .login-card .password-eye {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #6c757d;
+        }
+        /* Brighter while the password is showing */
+        .login-card .password-eye:hover,
+        .login-card .password-eye.active {
+            color: #fff;
+        }
+        /* The field turns white when focused, so "showing" is dark instead */
+        .login-card .form-control:focus + .password-eye:hover,
+        .login-card .form-control:focus + .password-eye.active {
+            color: #000;
+        }
+
         .login-card .form-control:focus {
             background-color: #fff;
             color: #000;

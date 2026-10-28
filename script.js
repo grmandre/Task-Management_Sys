@@ -1,16 +1,47 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const toggler = document.querySelector('.toggler-btn');
-    const sidebar = document.getElementById('sidebar');
+    const toggler  = document.querySelector('.toggler-btn');
+    const sidebar  = document.getElementById('sidebar');
+    const backdrop = document.getElementById('SIDEBAR_BACKDROP');
+    // Same breakpoint as the drawer styles in styles.css
+    const phone    = window.matchMedia('(max-width: 767.98px)');
+
+    // Phones: the sidebar slides in over the page. Wider screens: it collapses to icons.
+    function setDrawer(open) {
+        sidebar.classList.toggle('mobile-open', open);
+        if (backdrop) backdrop.classList.toggle('show', open);
+        document.body.classList.toggle('sidebar-open', open);
+        toggler.setAttribute('aria-expanded', open);
+    }
 
     if (toggler && sidebar) {
         toggler.addEventListener('click', function () {
-            sidebar.classList.toggle('collapsed');
+            if (phone.matches) {
+                sidebar.classList.remove('collapsed');   // the drawer always shows full labels
+                setDrawer(!sidebar.classList.contains('mobile-open'));
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
         });
+        if (backdrop) backdrop.addEventListener('click', () => setDrawer(false));
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') setDrawer(false); });
+        // Rotating / resizing past the breakpoint shouldn't leave the drawer open
+        phone.addEventListener('change', e => { if (!e.matches) setDrawer(false); });
     }
 
     REMINDERS.load();
     setInterval(REMINDERS.load, 60 * 1000);
 });
+
+// Eye button next to a password field: shows / hides what was typed
+function TOGGLE_PASSWORD(btn) {
+    const input = btn.parentElement.querySelector('input');
+    const show  = input.type === 'password';
+    input.type  = show ? 'text' : 'password';
+    btn.classList.toggle('active', show);
+    btn.setAttribute('aria-pressed', show);
+    btn.title = show ? 'Hide password' : 'Show password';
+    btn.setAttribute('aria-label', btn.title);
+}
 
 // Reminder bell in the navbar: polls for due reminders, pops a toast for new ones.
 const REMINDERS = (function () {
@@ -91,3 +122,4 @@ const REMINDERS = (function () {
         }
     };
 })();
+

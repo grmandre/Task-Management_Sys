@@ -43,8 +43,8 @@ if ($ACTION == 3) {
         $TEMP_PW .= $CHARS[random_int(0, strlen($CHARS) - 1)];
     }
 
-    $STMT = $GLOBALS['db']->prepare('UPDATE tbl_account SET password = ?, must_change_password = 1 WHERE id = ?');
-    $STMT->execute([password_hash($TEMP_PW, PASSWORD_DEFAULT), $USER_ID]);
+    $STMT = $GLOBALS['db']->prepare('UPDATE tbl_account SET password = ?, default_password = ?, must_change_password = 1 WHERE id = ?');
+    $STMT->execute([password_hash($TEMP_PW, PASSWORD_DEFAULT),$TEMP_PW, $USER_ID]);
 
     log_activity($_SESSION['user_id'], 'password_reset', $USER_ID);
 
@@ -172,7 +172,7 @@ try {
         $STMT1 = $GLOBALS['db']->prepare($SQL1);
         $STMT1->bindValue(':USERNAME', $UNAME);
         $STMT1->bindValue(':ROLE',     $ROLE);
-        $STMT1->bindValue(':STATUS',   $STATUS);
+       $STMT1->bindValue(':STATUS',   $STATUS);
         $STMT1->bindValue(':USER_ID',  $USER_ID, PDO::PARAM_INT);
         if ($PWORD !== '') {
             $STMT1->bindValue(':PASSWORD', password_hash($PWORD, PASSWORD_DEFAULT));

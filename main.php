@@ -131,11 +131,14 @@
     </div>
   </aside>
 
+  <!-- Dims the page behind the sidebar when it slides in on phones -->
+  <div class="sidebar-backdrop" id="SIDEBAR_BACKDROP"></div>
+
 
 
   <div class="main">
     <nav class="navbar navbar-expand border-bottom px-3">
-    <button class="toggler-btn me-3" type="button">
+    <button class="toggler-btn me-3" type="button" aria-label="Toggle menu" aria-controls="sidebar" aria-expanded="false">
         <i class="lni lni-align-text-left"></i>
     </button>
 
@@ -148,7 +151,7 @@
             <i class="lni lni-bell-1 fs-4"></i>
             <span id="BELL_COUNT" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
         </a>
-        <div class="dropdown-menu dropdown-menu-end p-0 shadow-sm overflow-hidden" style="width:320px;">
+        <div class="dropdown-menu dropdown-menu-end p-0 shadow-sm overflow-hidden" style="width:min(320px, calc(100vw - 1.5rem));">
             <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-dark text-white">
                 <span class="small fw-semibold">Reminders</span>
                 <button type="button" class="btn btn-sm btn-link text-white p-0 small text-decoration-none" onclick="REMINDERS.dismiss(0);">
@@ -161,8 +164,8 @@
         </div>
     </div>
 
-   <span class="badge
-        <?php 
+   <span class="badge d-none d-sm-inline-block
+        <?php
             $name = $uname['first_name'] ?? 'Guest';
             $role = $_SESSION['role'] ?? 'Guest';
             echo match($role) {
@@ -211,7 +214,7 @@
     </ul>
 </div>
 </nav>
-<div class="container-fluid p-4">
+<div class="container-fluid px-2 py-3 p-md-4">
 <?php
 $ALL = ['Admin', 'User'];
 
