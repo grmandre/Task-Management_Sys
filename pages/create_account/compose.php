@@ -172,7 +172,7 @@ try {
         $STMT1 = $GLOBALS['db']->prepare($SQL1);
         $STMT1->bindValue(':USERNAME', $UNAME);
         $STMT1->bindValue(':ROLE',     $ROLE);
-       $STMT1->bindValue(':STATUS',   $STATUS);
+        $STMT1->bindValue(':STATUS',   $STATUS);
         $STMT1->bindValue(':USER_ID',  $USER_ID, PDO::PARAM_INT);
         if ($PWORD !== '') {
             $STMT1->bindValue(':PASSWORD', password_hash($PWORD, PASSWORD_DEFAULT));
