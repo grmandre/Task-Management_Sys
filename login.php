@@ -24,7 +24,7 @@ session_start();
 
                     <div class="text-center mb-4">
                         <i class="lni lni-shield-2 fs-1"></i>
-                        <h4 class="mt-2">Dashboard Login</h4>
+                        <h4 class="mt-2">Productivity Tracker</h4>
                     </div>
 
                     <form method="post" action="auth.php">
