@@ -71,6 +71,7 @@ DROP TABLE IF EXISTS `tbl_tasks`;
 CREATE TABLE `tbl_tasks` (
     `id`           INT UNSIGNED  NOT NULL AUTO_INCREMENT,
     `user_id`      INT UNSIGNED  NOT NULL,
+    `parent_id`    INT UNSIGNED  DEFAULT NULL,        -- recurring series this occurrence came from
     `title`        VARCHAR(150)  NOT NULL,
     `description`  TEXT          DEFAULT NULL,
     `priority`     ENUM('Low','Medium','High')
@@ -79,6 +80,15 @@ CREATE TABLE `tbl_tasks` (
                                  NOT NULL DEFAULT 'Pending',
     `start_date`   DATE          DEFAULT NULL,
     `due_date`     DATE          DEFAULT NULL,
+    `due_time`     TIME          DEFAULT NULL,
+    `remind_before` INT UNSIGNED DEFAULT NULL,        -- minutes before due; NULL = no reminder
+    `remind_at`    DATETIME      DEFAULT NULL,        -- computed from due date/time - remind_before
+    `reminder_seen` TINYINT(1)   NOT NULL DEFAULT 0,
+    `repeat_type`  ENUM('none','daily','weekly','monthly')
+                                 NOT NULL DEFAULT 'none',
+    `repeat_days`  VARCHAR(100)  DEFAULT NULL,        -- weekly: ISO weekdays 1-7, monthly: days 1-31 (CSV)
+    `repeat_until` DATE          DEFAULT NULL,
+    `last_generated` DATE        DEFAULT NULL,        -- last date occurrences were created up to
     `completed_at` TIMESTAMP     NULL DEFAULT NULL,   -- set when status → Completed
     `is_deleted`   TINYINT(1)    NOT NULL DEFAULT 0,  -- soft delete flag
     `created_at`   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -89,13 +99,77 @@ CREATE TABLE `tbl_tasks` (
     INDEX `idx_status`  (`status`     ASC) USING BTREE,
     INDEX `idx_due`     (`due_date`   ASC) USING BTREE,
     INDEX `idx_deleted` (`is_deleted` ASC) USING BTREE,
+    INDEX `idx_remind`  (`remind_at`  ASC) USING BTREE,
+    INDEX `idx_parent`  (`parent_id`  ASC) USING BTREE,
     CONSTRAINT `fk_tasks_account`
         FOREIGN KEY (`user_id`)
         REFERENCES `tbl_account` (`id`)
-        ON DELETE CASCADE ON UPDATE RESTRICT
+        ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT `fk_tasks_parent`
+        FOREIGN KEY (`parent_id`)
+        REFERENCES `tbl_tasks` (`id`)
+        ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+--  3a. tbl_task_checklist  — subtasks inside a task
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `tbl_task_checklist`;
+CREATE TABLE `tbl_task_checklist` (
+    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `task_id`    INT UNSIGNED NOT NULL,
+    `title`      VARCHAR(255) NOT NULL,
+    `is_done`    TINYINT(1)   NOT NULL DEFAULT 0,
+    `position`   INT UNSIGNED NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_task` (`task_id`),
+    CONSTRAINT `fk_checklist_task` FOREIGN KEY (`task_id`)
+        REFERENCES `tbl_tasks` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+--  3b. tbl_task_notes  — progress notes on a task
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `tbl_task_notes`;
+CREATE TABLE `tbl_task_notes` (
+    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `task_id`    INT UNSIGNED NOT NULL,
+    `user_id`    INT UNSIGNED NOT NULL,
+    `note`       TEXT         NOT NULL,
+    `created_at` TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_task` (`task_id`),
+    CONSTRAINT `fk_notes_task`    FOREIGN KEY (`task_id`)
+        REFERENCES `tbl_tasks` (`id`)   ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `fk_notes_account` FOREIGN KEY (`user_id`)
+        REFERENCES `tbl_account` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+--  3c. tbl_task_templates  — reusable task presets
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `tbl_task_templates`;
+CREATE TABLE `tbl_task_templates` (
+    `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`       INT UNSIGNED NOT NULL,
+    `name`          VARCHAR(100) NOT NULL,
+    `title`         VARCHAR(150) NOT NULL,
+    `description`   TEXT         NULL,
+    `priority`      ENUM('Low','Medium','High') NOT NULL DEFAULT 'Medium',
+    `due_time`      TIME         NULL,
+    `remind_before` INT UNSIGNED NULL,
+    `repeat_type`   ENUM('none','daily','weekly','monthly') NOT NULL DEFAULT 'none',
+    `repeat_days`   VARCHAR(100) NULL,
+    `checklist`     TEXT         NULL,                -- JSON array of item titles
+    `created_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_user` (`user_id`),
+    CONSTRAINT `fk_templates_account` FOREIGN KEY (`user_id`)
+        REFERENCES `tbl_account` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 --  4. tbl_activity_logs  — audit trail of user actions

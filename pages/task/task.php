@@ -12,10 +12,14 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 $stmt = $conn->prepare("
-    SELECT id, title, priority, start_date, due_date, status, created_at
-    FROM tbl_tasks
-    WHERE user_id = ? AND is_deleted = 0
-    ORDER BY created_at DESC
+    SELECT t.id, t.parent_id, t.title, t.priority, t.start_date, t.due_date, t.due_time, t.status, t.created_at,
+           t.repeat_type, t.remind_at,
+           (SELECT COUNT(*) FROM tbl_task_checklist c WHERE c.task_id = t.id)                  AS items_total,
+           (SELECT COUNT(*) FROM tbl_task_checklist c WHERE c.task_id = t.id AND c.is_done = 1) AS items_done,
+           (SELECT COUNT(*) FROM tbl_task_notes n WHERE n.task_id = t.id)                      AS notes
+    FROM tbl_tasks t
+    WHERE t.user_id = ? AND t.is_deleted = 0
+    ORDER BY t.created_at DESC, t.id DESC
 ");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -50,7 +54,7 @@ $result = $stmt->get_result();
                                 <th class="ps-4">Title</th>
                                 <th>Priority</th>
                                 <th>Start Date</th>
-                                <th>Due Date</th>
+                                <th>Due</th>
                                 <th>Status</th>
                                 <th class="text-end pe-4">Actions</th>
                             </tr>
@@ -70,16 +74,32 @@ $result = $stmt->get_result();
                                 'Archived'    => 'bg-secondary',
                                 default       => 'bg-dark',
                             };
-                            $overdue = $task['due_date'] && $task['due_date'] < date('Y-m-d')
+                            $due_ts  = $task['due_date'] ? strtotime($task['due_date'] . ' ' . ($task['due_time'] ?: '23:59:59')) : null;
+                            $overdue = $due_ts && $due_ts < time()
                                        && !in_array($task['status'], ['Completed', 'Archived']);
+                            $is_series = !$task['parent_id'] && $task['repeat_type'] !== 'none';
                         ?>
                             <tr>
-                                <td class="ps-4 fw-semibold" style="max-width:260px;">
-                                    <span class="d-block text-truncate" title="<?= htmlspecialchars($task['title']) ?>">
+                                <td class="ps-4" style="max-width:300px;">
+                                    <a href="main.php?page=task_view&id=<?= $task['id'] ?>"
+                                       class="d-block text-truncate fw-semibold text-dark"
+                                       title="<?= htmlspecialchars($task['title']) ?>">
                                         <?= htmlspecialchars($task['title']) ?>
-                                    </span>
-                                    <small class="text-muted fw-normal">
-                                        Added <?= date('M j, Y', strtotime($task['created_at'])) ?>
+                                    </a>
+                                    <small class="text-muted d-flex flex-wrap gap-2">
+                                        <span>Added <?= date('M j, Y', strtotime($task['created_at'])) ?></span>
+                                        <?php if ($is_series || $task['parent_id']): ?>
+                                            <span title="Repeating task"><i class="lni lni-refresh-circle-1-clockwise"></i> Repeats</span>
+                                        <?php endif; ?>
+                                        <?php if ($task['items_total'] > 0): ?>
+                                            <span title="Checklist"><i class="lni lni-check-square-2"></i> <?= $task['items_done'] ?>/<?= $task['items_total'] ?></span>
+                                        <?php endif; ?>
+                                        <?php if ($task['notes'] > 0): ?>
+                                            <span title="Notes"><i class="lni lni-comment-1-text"></i> <?= $task['notes'] ?></span>
+                                        <?php endif; ?>
+                                        <?php if ($task['remind_at']): ?>
+                                            <span title="Reminder set"><i class="lni lni-bell-1"></i></span>
+                                        <?php endif; ?>
                                     </small>
                                 </td>
 
@@ -100,6 +120,9 @@ $result = $stmt->get_result();
                                         <span class="<?= $overdue ? 'text-danger fw-semibold' : 'text-muted' ?>">
                                             <?= date('M d, Y', strtotime($task['due_date'])) ?>
                                             <?= $overdue ? ' <i class="lni lni-alarm-1 text-danger" title="Overdue"></i>' : '' ?>
+                                            <?php if ($task['due_time']): ?>
+                                                <br><small><?= date('g:i A', strtotime($task['due_time'])) ?></small>
+                                            <?php endif; ?>
                                         </span>
                                     <?php else: ?>
                                         <span class="text-muted">—</span>
@@ -118,9 +141,14 @@ $result = $stmt->get_result();
                                         Edit
                                     </a>
 
+                                    <a href="main.php?page=tasks_create&from=<?= $task['id'] ?>"
+                                       class="btn btn-sm btn-outline-dark" title="Duplicate">
+                                        Duplicate
+                                    </a>
+
                                     <button type="button"
                                             class="btn btn-sm btn-outline-danger"
-                                            onclick='DELETE_TASK(<?= (int)$task['id'] ?>, <?= htmlspecialchars(json_encode($task['title']), ENT_QUOTES) ?>)'>
+                                            onclick='DELETE_TASK(<?= (int)$task['id'] ?>, <?= htmlspecialchars(json_encode($task['title']), ENT_QUOTES) ?>, <?= $is_series ? 'true' : 'false' ?>)'>
                                         Delete
                                     </button>
                                 </td>

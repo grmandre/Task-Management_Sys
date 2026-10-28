@@ -20,7 +20,7 @@ $stmt->close();
 $stmt = $conn->prepare("
     SELECT l.action, l.reference_id, l.created_at, t.title
     FROM tbl_activity_logs l
-    LEFT JOIN tbl_tasks t ON t.id = l.reference_id AND l.action LIKE 'task\\_%'
+    LEFT JOIN tbl_tasks t ON t.id = l.reference_id AND (l.action LIKE 'task\\_%' OR l.action = 'note_added')
     WHERE l.user_id = ?
     ORDER BY l.created_at DESC, l.id DESC
     LIMIT 10
@@ -45,6 +45,8 @@ $ACTION_LABELS = [
     'account_created'        => ['Created a user account','lni-user-multiple-4'],
     'account_updated'        => ['Updated a user account','lni-pencil-1'],
     'password_reset'         => ["Reset a user's password",'lni-locked-2'],
+    'note_added'             => ['Added a note to',      'lni-comment-1-text'],
+    'template_saved'         => ['Saved a task template', 'lni-layers-1'],
 ];
 
 $status_class = match($account['status'] ?? '') {

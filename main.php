@@ -10,8 +10,12 @@
         exit();
     }
     include_once 'db/db.php';
-  
-    $stmt = $conn->prepare(" 
+    include_once 'includes/tasks.php';
+
+    // Add today's copies of the user's recurring tasks (cheap when there's nothing to do).
+    generate_recurring_tasks((int)$_SESSION['user_id']);
+
+    $stmt = $conn->prepare("
                 SELECT id, first_name, last_name, username FROM vw_user WHERE id = ?
                 ");
                 $stmt->bind_param("i", $_SESSION['user_id']);
@@ -71,7 +75,7 @@
 </li>
 
       <li class="sidebar-item">
-  <a href="main.php?page=task" class="sidebar-link<?= $nav_active('task', 'tasks_edit') ?>">
+  <a href="main.php?page=task" class="sidebar-link<?= $nav_active('task', 'tasks_edit', 'task_view') ?>">
     <i class="lni lni-agenda"></i>
     <span>Tasks</span>
   </a>
@@ -136,7 +140,28 @@
     </button>
 
     <div class="ms-auto d-flex align-items-center">
-   <span class="badge 
+
+    <!-- Reminders bell (filled by REMINDERS in script.js) -->
+    <div class="dropdown me-3">
+        <a href="#" class="position-relative d-inline-flex text-dark" id="BELL"
+           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Reminders">
+            <i class="lni lni-bell-1 fs-4"></i>
+            <span id="BELL_COUNT" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end p-0 shadow-sm overflow-hidden" style="width:320px;">
+            <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-dark text-white">
+                <span class="small fw-semibold">Reminders</span>
+                <button type="button" class="btn btn-sm btn-link text-white p-0 small text-decoration-none" onclick="REMINDERS.dismiss(0);">
+                    Mark all as read
+                </button>
+            </div>
+            <div id="BELL_LIST" style="max-height:320px;overflow-y:auto;">
+                <p class="text-muted small text-center py-3 mb-0">No reminders right now.</p>
+            </div>
+        </div>
+    </div>
+
+   <span class="badge
         <?php 
             $name = $uname['first_name'] ?? 'Guest';
             $role = $_SESSION['role'] ?? 'Guest';
@@ -197,6 +222,7 @@ $routes = [
     'task'             => ['pages/task/task.php',            $ALL],
     'tasks_create'     => ['pages/create/create.php',        $ALL],
     'tasks_edit'       => ['pages/create/create.php',        $ALL],
+    'task_view'        => ['pages/task/view.php',            $ALL],
     'settings_general' => ['pages/settings/general.php',     $ALL],
     'settings_security'=> ['pages/settings/security.php',    $ALL],
     'users'            => ['pages/users/users.php',          ['Admin']],

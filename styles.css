@@ -162,3 +162,13 @@ a.sidebar-link.active{
 #sidebar.collapsed .sidebar-logo{
     padding: 1.0rem 0;
 }
+
+/* Checkboxes and toggles in the app's dark accent instead of Bootstrap blue */
+.form-check-input:checked{
+    background-color: #212529;
+    border-color: #212529;
+}
+.form-check-input:focus{
+    border-color: #212529;
+    box-shadow: 0 0 0 .2rem #21252940;
+}
