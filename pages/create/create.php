@@ -79,6 +79,9 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $prefill_due)) {
 }
 
 $IS_OCCURRENCE = $IS_EDIT && $task && $task['parent_id'];
+// Past days of a repeating task are read-only; a series whose first day passed keeps that day's status and dates
+$LOCKED      = $IS_EDIT && $task && day_locked($task);
+$LOCKED_COPY = $LOCKED && $IS_OCCURRENCE;
 $val         = fn($key, $default = '') => htmlspecialchars((string)($task[$key] ?? $default));
 $repeat_type = $task['repeat_type'] ?? 'none';
 $repeat_days = array_map('intval', array_filter(explode(',', (string)($task['repeat_days'] ?? '')), 'strlen'));
@@ -114,6 +117,20 @@ $remind      = $task['remind_before'] ?? null;
                     <h6 class="fw-bold mt-3">Task not found</h6>
                     <p class="text-muted small">It may have been deleted, or it belongs to another user.</p>
                     <a href="main.php?page=task" class="btn btn-dark btn-sm px-4">Back to Tasks</a>
+                </div>
+            </div>
+
+            <?php elseif ($LOCKED_COPY): ?>
+
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4 p-md-5 text-center">
+                    <i class="lni lni-locked-2 fs-1 text-muted"></i>
+                    <h6 class="fw-bold mt-3">This day can't be edited</h6>
+                    <p class="text-muted small"><?= htmlspecialchars(LOCKED_DAY_MESSAGE) ?></p>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <a href="main.php?page=task_view&id=<?= (int)$task['id'] ?>" class="btn btn-outline-dark btn-sm px-4">View this day</a>
+                        <a href="main.php?page=tasks_edit&id=<?= (int)$task['parent_id'] ?>" class="btn btn-dark btn-sm px-4">Edit series</a>
+                    </div>
                 </div>
             </div>
 
@@ -174,11 +191,14 @@ $remind      = $task['remind_before'] ?? null;
                             <div class="col-md-6">
                                 <?php if ($IS_EDIT): ?>
                                 <label class="form-label small fw-semibold">Status</label>
-                                <select name="status" class="form-select" id="STATUS">
+                                <select name="status" class="form-select" id="STATUS" <?= $LOCKED ? 'disabled' : '' ?>>
                                     <?php foreach (['Pending', 'In Progress', 'Completed', 'Archived'] as $s): ?>
                                         <option value="<?= $s ?>" <?= $task['status'] === $s ? 'selected' : '' ?>><?= $s ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                                <?php endif; ?>
+                                <?php if ($LOCKED): ?>
+                                <div class="form-text"><i class="lni lni-locked-2"></i> The first day has passed, so its status and dates are locked. Changes here apply to future days.</div>
                                 <?php endif; ?>
                             </div>
 
@@ -188,6 +208,7 @@ $remind      = $task['remind_before'] ?? null;
                                        name="start_date"
                                        class="form-control"
                                        id="PUBLISH"
+                                       <?= $LOCKED ? 'disabled' : '' ?>
                                        value="<?= $task ? $val('start_date') : date('Y-m-d') ?>">
                             </div>
 
@@ -197,6 +218,7 @@ $remind      = $task['remind_before'] ?? null;
                                        name="due_date"
                                        class="form-control"
                                        id="EXPIRY"
+                                       <?= $LOCKED ? 'disabled' : '' ?>
                                        oninput="SYNC_DUE_FIELDS();"
                                        value="<?= $task ? $val('due_date') : $prefill_due ?>">
                             </div>
@@ -288,7 +310,7 @@ $remind      = $task['remind_before'] ?? null;
                         <div id="CHECKLIST" class="mb-2">
                             <?php foreach ($items as $item): ?>
                                 <div class="checklist-row d-flex align-items-center gap-2 mb-2" data-id="<?= (int)$item['id'] ?>">
-                                    <input type="checkbox" class="form-check-input mt-0 item-done" <?= $item['done'] ? 'checked' : '' ?> aria-label="Done">
+                                    <input type="checkbox" class="form-check-input mt-0 item-done" <?= $item['done'] ? 'checked' : '' ?> <?= $LOCKED ? 'disabled' : '' ?> aria-label="Done">
                                     <input type="text" class="form-control form-control-sm item-title" maxlength="255" value="<?= htmlspecialchars($item['title']) ?>">
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove();" aria-label="Remove item">
                                         <i class="lni lni-trash-3"></i>
@@ -364,7 +386,7 @@ $remind      = $task['remind_before'] ?? null;
 }
 </style>
 
-<script src="pages/create/script.js"></script>
+<script src="<?= asset('pages/create/script.js') ?>"></script>
 <script>
     // jQuery loads at the end of main.php, so wait for the page to finish
     document.addEventListener("DOMContentLoaded", () => {

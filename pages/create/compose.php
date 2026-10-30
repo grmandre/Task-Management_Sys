@@ -61,6 +61,19 @@ if ($ACTION == 1 || $ACTION == 2) {
 
     $EXISTING = $ACTION == 2 ? own_task($TASK_ID, $USER_ID) : null;
 
+    // A past day of a repeating series is read-only. The series itself (its first task) stays
+    // editable for future days, but its own day keeps the status, dates and ticks it ended with.
+    $LOCKED_ROOT = false;
+    if ($EXISTING && day_locked($EXISTING)) {
+        if ($EXISTING['parent_id']) {
+            respond('error', LOCKED_DAY_MESSAGE);
+        }
+        $LOCKED_ROOT = true;
+        $STATUS = $EXISTING['status'];
+        $PUB    = (string)$EXISTING['start_date'];
+        $EXP    = (string)$EXISTING['due_date'];
+    }
+
     if ($TITLE === '') {
         respond('error', 'Task title cannot be empty.');
     }
@@ -204,12 +217,13 @@ if ($ACTION == 1 || $ACTION == 2) {
         $keep = [];
         foreach ($ITEMS as $item) {
             if (in_array($item['id'], $current_ids, true)) {
-                $upd = $db->prepare('UPDATE tbl_task_checklist SET title = ?, is_done = ?, position = ? WHERE id = ?');
-                $upd->execute([$item['title'], $item['done'], $item['position'], $item['id']]);
+                // a locked first day keeps the ticks it ended with
+                $upd = $db->prepare('UPDATE tbl_task_checklist SET title = ?, is_done = IF(?, is_done, ?), position = ? WHERE id = ?');
+                $upd->execute([$item['title'], $LOCKED_ROOT ? 1 : 0, $item['done'], $item['position'], $item['id']]);
                 $keep[] = $item['id'];
             } else {
                 $ins = $db->prepare('INSERT INTO tbl_task_checklist (task_id, title, is_done, position) VALUES (?, ?, ?, ?)');
-                $ins->execute([$TASK_ID, $item['title'], $item['done'], $item['position']]);
+                $ins->execute([$TASK_ID, $item['title'], $LOCKED_ROOT ? 0 : $item['done'], $item['position']]);
                 $keep[] = (int)$db->lastInsertId();
             }
         }
@@ -231,7 +245,10 @@ if ($ACTION == 1 || $ACTION == 2) {
 //delete task (soft delete) — deleting the first task of a recurring series also stops the series
 
 if ($ACTION == 3) {
-    own_task($TASK_ID, $USER_ID);
+    $task = own_task($TASK_ID, $USER_ID);
+    if ($task['parent_id'] && day_locked($task)) {
+        respond('error', LOCKED_DAY_MESSAGE);
+    }
     $stmt = $GLOBALS['db']->prepare('UPDATE tbl_tasks SET is_deleted = 1 WHERE id = ? AND user_id = ?');
     $stmt->execute([$TASK_ID, $USER_ID]);
 
@@ -244,6 +261,12 @@ if ($ACTION == 3) {
 if ($ACTION == 4) {
     $ITEM_ID = intval($_POST['ITEM_ID'] ?? 0);
     $DONE    = !empty($_POST['DONE']) ? 1 : 0;
+
+    $owner = $GLOBALS['db']->prepare('SELECT task_id FROM tbl_task_checklist WHERE id = ?');
+    $owner->execute([$ITEM_ID]);
+    if (day_locked(own_task((int)$owner->fetchColumn(), $USER_ID))) {
+        respond('error', LOCKED_DAY_MESSAGE);
+    }
 
     $stmt = $GLOBALS['db']->prepare('
         UPDATE tbl_task_checklist c JOIN tbl_tasks t ON t.id = c.task_id
@@ -263,7 +286,10 @@ if ($ACTION == 4) {
 //add checklist item from the task page (5)
 
 if ($ACTION == 5) {
-    own_task($TASK_ID, $USER_ID);
+    $task = own_task($TASK_ID, $USER_ID);
+    if ($task['parent_id'] && day_locked($task)) {   // the series' own list is also the template for future days
+        respond('error', LOCKED_DAY_MESSAGE);
+    }
     $TITLE = trim($_POST['TITLE'] ?? '');
     if ($TITLE === '' || mb_strlen($TITLE) > 255) {
         respond('error', 'Checklist items must be 1–255 characters.');
@@ -277,7 +303,10 @@ if ($ACTION == 5) {
 //add progress note (6) / delete note (7)
 
 if ($ACTION == 6) {
-    own_task($TASK_ID, $USER_ID);
+    $task = own_task($TASK_ID, $USER_ID);
+    if ($task['parent_id'] && day_locked($task)) {
+        respond('error', LOCKED_DAY_MESSAGE);
+    }
     $NOTE = trim($_POST['NOTE'] ?? '');
     if ($NOTE === '') {
         respond('error', 'Note cannot be empty.');
@@ -291,6 +320,16 @@ if ($ACTION == 6) {
 }
 
 if ($ACTION == 7) {
+    $note = $GLOBALS['db']->prepare('SELECT task_id FROM tbl_task_notes WHERE id = ? AND user_id = ?');
+    $note->execute([intval($_POST['NOTE_ID'] ?? 0), $USER_ID]);
+    $note_task = $note->fetchColumn();
+    if (!$note_task) {
+        respond('error', 'Note not found.');
+    }
+    $task = own_task((int)$note_task, $USER_ID);
+    if ($task['parent_id'] && day_locked($task)) {
+        respond('error', LOCKED_DAY_MESSAGE);
+    }
     $stmt = $GLOBALS['db']->prepare('DELETE FROM tbl_task_notes WHERE id = ? AND user_id = ?');
     $stmt->execute([intval($_POST['NOTE_ID'] ?? 0), $USER_ID]);
     if (!$stmt->rowCount()) {
@@ -331,6 +370,41 @@ if ($ACTION == 9) {
         respond('error', 'Template not found.');
     }
     respond('success', 'Template deleted.');
+}
+
+//tick / untick one day of a repeating task (10)
+if ($ACTION == 10) {
+    $task = own_task($TASK_ID, $USER_ID);
+    $root = $task['parent_id'] ? own_task($task['parent_id'], $USER_ID) : $task;
+    $DATE = $_POST['DATE'] ?? '';
+    $DONE = !empty($_POST['DONE']);
+
+    if ($root['repeat_type'] === 'none') {
+        respond('error', 'Only repeating tasks have daily check-ins.');
+    }
+    $d = DateTime::createFromFormat('!Y-m-d', $DATE);
+    if (!$d || $d->format('Y-m-d') !== $DATE) {
+        respond('error', 'Invalid date.');
+    }
+    if ($DATE > date('Y-m-d')) {
+        respond('error', "You can't check in a day that hasn't happened yet.");
+    }
+    if ($DATE < date('Y-m-d')) {
+        respond('error', LOCKED_DAY_MESSAGE);
+    }
+    if ($DATE < series_day($root) || $DATE > series_last_day($root) || !is_scheduled($root, $DATE)) {
+        respond('error', 'This task is not scheduled on that day.');
+    }
+
+    set_checkin($root, $DATE, $DONE);
+    $stats = series_checkins(own_task($root['id'], $USER_ID));   // re-read: the first day's status lives on $root
+    respond('success', $DONE ? 'Checked in.' : 'Check-in removed.', [
+        'state'     => $stats['days'][$DATE] ?? null,
+        'streak'    => $stats['streak'],
+        'best'      => $stats['best'],
+        'done'      => $stats['done'],
+        'scheduled' => $stats['scheduled'],
+    ]);
 }
 
 respond('error', 'Invalid action.');

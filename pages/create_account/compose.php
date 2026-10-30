@@ -10,6 +10,17 @@ function respond($status, $message) {
     exit();
 }
 
+// Temporary password the admin hands to the user; they must replace it at next login.
+// No look-alike characters (0/O, 1/l/I) so it's easy to read out or type.
+function generate_temp_password($length = 10) {
+    $CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    $PW = '';
+    for ($i = 0; $i < $length; $i++) {
+        $PW .= $CHARS[random_int(0, strlen($CHARS) - 1)];
+    }
+    return $PW;
+}
+
 if (!isset($_SESSION['user_id'])) {
     respond('error', 'Your session has expired. Please log in again.');
 }
@@ -36,12 +47,7 @@ if ($ACTION == 3) {
         respond('error', 'User not found.');
     }
 
-    // No look-alike characters (0/O, 1/l/I) so it's easy to read out or type.
-    $CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    $TEMP_PW = '';
-    for ($i = 0; $i < 10; $i++) {
-        $TEMP_PW .= $CHARS[random_int(0, strlen($CHARS) - 1)];
-    }
+    $TEMP_PW = generate_temp_password();
 
     $STMT = $GLOBALS['db']->prepare('UPDATE tbl_account SET password = ?, default_password = ?, must_change_password = 1 WHERE id = ?');
     $STMT->execute([password_hash($TEMP_PW, PASSWORD_DEFAULT),$TEMP_PW, $USER_ID]);
@@ -81,7 +87,6 @@ $MNUM     = trim($_POST['MOBILE_NUM']  ?? '');
 $ROLE     = $_POST['ROLE']             ?? '';
 $STATUS   = $_POST['STATUS']           ?? 'Active';
 $UNAME    = trim($_POST['USERNAME']    ?? '');
-$PWORD    = $_POST['PASSWORD']         ?? '';
 
 // Admins can't change their own role/status, so there is always at least one active admin.
 if ($IS_SELF) {
@@ -92,10 +97,6 @@ if ($IS_SELF) {
 // ── Validate ───────────────────────────────────────────────────────────────
 if (!in_array($ROLE, ['Admin', 'User'], true)) {
     respond('error', 'Role must be Admin or User.');
-}
-
-if (!in_array($STATUS, ['Active', 'Inactive', 'Disabled'], true)) {
-    respond('error', 'Please select a valid status.');
 }
 
 if (empty($LNAME) || empty($FNAME)) {
@@ -116,11 +117,6 @@ if (empty($UNAME)) {
 
 if (mb_strlen($UNAME) > 55) {
     respond('error', 'Username must be 55 characters or fewer.');
-}
-
-// New accounts need a password; when editing, a blank password keeps the current one.
-if ((!$IS_EDIT || $PWORD !== '') && strlen($PWORD) < 6) {
-    respond('error', 'Password must be at least 6 characters.');
 }
 
 $CHK = $GLOBALS['db']->prepare('SELECT 1 FROM tbl_account WHERE username = ? AND id <> ?');
@@ -150,11 +146,15 @@ try {
     $GLOBALS['db']->beginTransaction();
 
     if (!$IS_EDIT) {
-        // CREATE ACCOUNT — credentials into tbl_account
-        $STMT1 = $GLOBALS['db']->prepare('INSERT INTO tbl_account (username, password, role) VALUES (:USERNAME, :PASSWORD, :ROLE)');
-        $STMT1->bindValue(':USERNAME', $UNAME);
-        $STMT1->bindValue(':PASSWORD', password_hash($PWORD, PASSWORD_DEFAULT));
-        $STMT1->bindValue(':ROLE',     $ROLE);
+        // CREATE ACCOUNT — credentials into tbl_account with a generated password
+        // the user must change at first login.
+        $TEMP_PW = generate_temp_password();
+        $STMT1 = $GLOBALS['db']->prepare('INSERT INTO tbl_account (username, password, default_password, must_change_password, role)
+                                          VALUES (:USERNAME, :PASSWORD, :DEFAULT_PASSWORD, 1, :ROLE)');
+        $STMT1->bindValue(':USERNAME',         $UNAME);
+        $STMT1->bindValue(':PASSWORD',         password_hash($TEMP_PW, PASSWORD_DEFAULT));
+        $STMT1->bindValue(':DEFAULT_PASSWORD', $TEMP_PW);
+        $STMT1->bindValue(':ROLE',             $ROLE);
         $STMT1->execute();
 
         $USER_ID = (int)$GLOBALS['db']->lastInsertId();
@@ -164,19 +164,12 @@ try {
                                           VALUES (:USER_ID, :FNAME, :MNAME, :LNAME, :AGE, :MNUM, :AVATAR)');
         $STMT2->bindValue(':AVATAR', $AVATAR);
     } else {
-        // EDIT USER — password only changes when a new one was entered;
-        // a password set by an admin for someone else must be changed by that user at next login.
-        $SQL1 = 'UPDATE tbl_account SET username = :USERNAME, role = :ROLE, status = :STATUS'
-              . ($PWORD !== '' ? ', password = :PASSWORD, must_change_password = ' . ($IS_SELF ? '0' : '1') : '')
-              . ' WHERE id = :USER_ID';
-        $STMT1 = $GLOBALS['db']->prepare($SQL1);
+        // EDIT USER — passwords are changed through Reset Password (ACTION 3), not here.
+        $STMT1 = $GLOBALS['db']->prepare('UPDATE tbl_account SET username = :USERNAME, role = :ROLE, status = :STATUS WHERE id = :USER_ID');
         $STMT1->bindValue(':USERNAME', $UNAME);
         $STMT1->bindValue(':ROLE',     $ROLE);
         $STMT1->bindValue(':STATUS',   $STATUS);
         $STMT1->bindValue(':USER_ID',  $USER_ID, PDO::PARAM_INT);
-        if ($PWORD !== '') {
-            $STMT1->bindValue(':PASSWORD', password_hash($PWORD, PASSWORD_DEFAULT));
-        }
         $STMT1->execute();
 
         $SQL2 = 'UPDATE tbl_info SET first_name = :FNAME, middle_name = :MNAME, last_name = :LNAME, age = :AGE, phone = :MNUM'
@@ -208,7 +201,13 @@ try {
 
 if (!$IS_EDIT) {
     log_activity($_SESSION['user_id'], 'account_created', $USER_ID);
-    respond('success', 'Account created successfully.');
+    echo json_encode([
+        'status'   => 'success',
+        'message'  => 'Account created successfully.',
+        'username' => $UNAME,
+        'password' => $TEMP_PW,
+    ]);
+    exit();
 }
 
 // Replacing the avatar — remove the old file so uploads don't pile up.

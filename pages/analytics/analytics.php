@@ -3,22 +3,61 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 include_once 'db/db.php';
+include_once 'includes/tasks.php';
 
 $is_admin = ($_SESSION['role'] ?? '') === 'Admin';
 
 // ── Filters ────────────────────────────────────────────────────────────────
 // Admins can look at everyone (user=0) or one user; regular users only see themselves.
-$RANGES = [7 => 'Last 7 days', 30 => 'Last 30 days', 90 => 'Last 90 days'];
-$days   = array_key_exists((int)($_GET['range'] ?? 30), $RANGES) ? (int)($_GET['range'] ?? 30) : 30;
+// Range: a preset (range=7|30|90) or a custom one (range=custom&from=Y-m-d&to=Y-m-d), up to a year long.
+$RANGES   = [7 => 'Last 7 days', 30 => 'Last 30 days', 90 => 'Last 90 days'];
+const MAX_RANGE_DAYS = 366;
+
+$today    = date('Y-m-d');
+$is_date  = fn($s) => is_string($s) && ($d = DateTime::createFromFormat('!Y-m-d', $s)) && $d->format('Y-m-d') === $s;
+$range    = $_GET['range'] ?? '30';
+$range_note = '';
+
+if ($range === 'custom' && $is_date($_GET['from'] ?? null) && $is_date($_GET['to'] ?? null)) {
+    [$from, $to] = [$_GET['from'], $_GET['to']];
+    if ($from > $to) {
+        [$from, $to] = [$to, $from];
+    }
+    if ($to > $today) {
+        $to = $today;
+        $from = min($from, $to);
+        $range_note = 'The end date was moved to today.';
+    }
+    if ((strtotime($to) - strtotime($from)) / 86400 + 1 > MAX_RANGE_DAYS) {
+        $from = date('Y-m-d', strtotime($to . ' -' . (MAX_RANGE_DAYS - 1) . ' days'));
+        $range_note .= ' Ranges are limited to one year, so the start date was moved to ' . date('M j, Y', strtotime($from)) . '.';
+    }
+} else {
+    $range = array_key_exists((int)$range, $RANGES) ? (int)$range : 30;
+    $to    = $today;
+    $from  = date('Y-m-d', strtotime('-' . ($range - 1) . ' days'));
+}
+
+$is_custom = $range === 'custom';
+$days      = (int)round((strtotime($to) - strtotime($from)) / 86400) + 1;
+$since     = $from . ' 00:00:00';
+$until     = date('Y-m-d 00:00:00', strtotime($to . ' +1 day'));   // exclusive upper bound
+
+// "Last 30 days" / "Oct 1 – Oct 15, 2026" and the matching in-sentence phrase
+$fmt_from     = date(substr($from, 0, 4) === substr($to, 0, 4) ? 'M j' : 'M j, Y', strtotime($from));
+$range_label  = $is_custom ? ($from === $to ? date('M j, Y', strtotime($from)) : $fmt_from . ' – ' . date('M j, Y', strtotime($to))) : $RANGES[$range];
+$range_phrase = $is_custom ? ($from === $to ? 'on ' . $range_label : 'between ' . $fmt_from . ' and ' . date('M j, Y', strtotime($to)))
+                           : 'in the ' . strtolower($RANGES[$range]);
+$range_qs     = $is_custom ? "range=custom&from=$from&to=$to" : "range=$range";
+
 $target = $is_admin ? intval($_GET['user'] ?? 0) : (int)$_SESSION['user_id'];
-$since  = date('Y-m-d 00:00:00', strtotime('-' . ($days - 1) . ' days'));
 
 $users = $is_admin
     ? $conn->query("SELECT id, username, first_name, last_name FROM vw_user ORDER BY first_name, last_name")->fetch_all(MYSQLI_ASSOC)
     : [];
 
 $scope  = $target ? 'user_id = :uid' : '1 = 1';
-$params = $target ? [':uid' => $target, ':since' => $since] : [':since' => $since];
+$params = ($target ? [':uid' => $target] : []) + [':since' => $since, ':until' => $until];
 
 $q = function ($sql, $p) {
     $stmt = $GLOBALS['db']->prepare($sql);
@@ -26,21 +65,28 @@ $q = function ($sql, $p) {
     return $stmt;
 };
 
-// ── Task outcomes for tasks created in the range ───────────────────────────
+// ── Task outcomes for tasks made, due or finished in the range ─────────────
 // Every task lands in exactly one bucket: on time / late / still open / overdue / dropped.
+// Late and overdue compare against the due time (end of the day when there is none).
+$deadline     = sql_deadline();
+$in_range     = "((created_at >= :since AND created_at < :until)
+                  OR (completed_at >= :since_c AND completed_at < :until_c)
+                  OR due_date BETWEEN :from_d AND :to_d)";
+$range_params = $params + [':since_c' => $since, ':until_c' => $until, ':from_d' => $from, ':to_d' => $to];
+
 $o = $q("
     SELECT COUNT(*) AS total,
         SUM(status = 'Completed') AS completed,
-        SUM(status = 'Completed' AND (due_date IS NULL OR completed_at IS NULL OR DATE(completed_at) <= due_date)) AS on_time,
-        SUM(status = 'Completed' AND due_date IS NOT NULL AND DATE(completed_at) > due_date) AS late,
-        SUM(is_deleted = 0 AND status IN ('Pending','In Progress') AND due_date < CURDATE()) AS overdue,
-        SUM(is_deleted = 0 AND status IN ('Pending','In Progress') AND (due_date IS NULL OR due_date >= CURDATE())) AS open,
+        SUM(status = 'Completed' AND (due_date IS NULL OR completed_at IS NULL OR completed_at <= $deadline)) AS on_time,
+        SUM(status = 'Completed' AND due_date IS NOT NULL AND completed_at > $deadline) AS late,
+        SUM(is_deleted = 0 AND status IN ('Pending','In Progress') AND $deadline < NOW()) AS overdue,
+        SUM(is_deleted = 0 AND status IN ('Pending','In Progress') AND (due_date IS NULL OR $deadline >= NOW())) AS open,
         SUM(status <> 'Completed' AND (is_deleted = 1 OR status = 'Archived')) AS dropped,
         AVG(CASE WHEN status = 'Completed' AND completed_at IS NOT NULL
                  THEN TIMESTAMPDIFF(MINUTE, created_at, completed_at) END) / 1440 AS avg_days
     FROM tbl_tasks
-    WHERE $scope AND created_at >= :since
-", $params)->fetch(PDO::FETCH_ASSOC);
+    WHERE $scope AND $in_range
+", $range_params)->fetch(PDO::FETCH_ASSOC);
 
 $o = array_map(fn($v) => $v === null ? 0 : $v, $o);
 $total      = (int)$o['total'];
@@ -55,27 +101,27 @@ $avg_days        = $completed > 0 ? (float)$o['avg_days'] : null;
 // ── Daily series ───────────────────────────────────────────────────────────
 $created_by_day = $q("
     SELECT DATE(created_at) AS d, COUNT(*) AS n
-    FROM tbl_tasks WHERE $scope AND created_at >= :since GROUP BY d
+    FROM tbl_tasks WHERE $scope AND created_at >= :since AND created_at < :until GROUP BY d
 ", $params)->fetchAll(PDO::FETCH_KEY_PAIR);
 
 $completed_by_day = $q("
     SELECT DATE(completed_at) AS d, COUNT(*) AS n
-    FROM tbl_tasks WHERE $scope AND status = 'Completed' AND completed_at >= :since GROUP BY d
+    FROM tbl_tasks WHERE $scope AND status = 'Completed' AND completed_at >= :since AND completed_at < :until GROUP BY d
 ", $params)->fetchAll(PDO::FETCH_KEY_PAIR);
 
 $usage_rows = $q("
     SELECT DATE(created_at) AS d, COUNT(*) AS actions, SUM(action = 'login') AS logins, COUNT(DISTINCT user_id) AS users
-    FROM tbl_activity_logs WHERE $scope AND created_at >= :since GROUP BY d
+    FROM tbl_activity_logs WHERE $scope AND created_at >= :since AND created_at < :until GROUP BY d
 ", $params)->fetchAll(PDO::FETCH_ASSOC);
 $usage_by_day = array_column($usage_rows, null, 'd');
 
-// One entry per calendar day, zero-filled
+// One entry per calendar day, zero-filled; the year is added when the range spans two years
+$label_fmt = substr($from, 0, 4) === substr($to, 0, 4) ? 'M j' : 'M j, Y';
 $series = [];
-for ($i = $days - 1; $i >= 0; $i--) {
-    $d = date('Y-m-d', strtotime("-$i days"));
+for ($d = $from; $d <= $to; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
     $series[] = [
         'date'      => $d,
-        'label'     => date('M j', strtotime($d)),
+        'label'     => date($label_fmt, strtotime($d)),
         'created'   => (int)($created_by_day[$d] ?? 0),
         'completed' => (int)($completed_by_day[$d] ?? 0),
         'actions'   => (int)($usage_by_day[$d]['actions'] ?? 0),
@@ -89,22 +135,27 @@ $tasks_per_day = $total / $days;
 // ── Per-user tendencies (admin, all users) ─────────────────────────────────
 $per_user = [];
 if ($is_admin && !$target) {
+    $t_deadline = sql_deadline('t.');
     $per_user = $q("
         SELECT u.id, u.username, u.first_name, u.last_name,
             COUNT(t.id) AS total,
             COALESCE(SUM(t.status = 'Completed'), 0) AS completed,
-            COALESCE(SUM(t.status = 'Completed' AND t.due_date IS NOT NULL AND DATE(t.completed_at) > t.due_date), 0) AS late,
-            COALESCE(SUM(t.is_deleted = 0 AND t.status IN ('Pending','In Progress') AND t.due_date < CURDATE()), 0) AS overdue,
+            COALESCE(SUM(t.status = 'Completed' AND t.due_date IS NOT NULL AND t.completed_at > $t_deadline), 0) AS late,
+            COALESCE(SUM(t.is_deleted = 0 AND t.status IN ('Pending','In Progress') AND $t_deadline < NOW()), 0) AS overdue,
             COALESCE(SUM(t.status <> 'Completed' AND (t.is_deleted = 1 OR t.status = 'Archived')), 0) AS dropped,
             AVG(CASE WHEN t.status = 'Completed' AND t.completed_at IS NOT NULL
                      THEN TIMESTAMPDIFF(MINUTE, t.created_at, t.completed_at) END) / 1440 AS avg_days,
             (SELECT COUNT(DISTINCT DATE(l.created_at)) FROM tbl_activity_logs l
-              WHERE l.user_id = u.id AND l.created_at >= :since2) AS active_days
+              WHERE l.user_id = u.id AND l.created_at >= :since2 AND l.created_at < :until2) AS active_days
         FROM vw_user u
-        LEFT JOIN tbl_tasks t ON t.user_id = u.id AND t.created_at >= :since
+        LEFT JOIN tbl_tasks t ON t.user_id = u.id
+             AND ((t.created_at >= :since AND t.created_at < :until)
+                  OR (t.completed_at >= :since_c AND t.completed_at < :until_c)
+                  OR t.due_date BETWEEN :from_d AND :to_d)
         GROUP BY u.id
         ORDER BY total DESC, u.first_name
-    ", [':since' => $since, ':since2' => $since])->fetchAll(PDO::FETCH_ASSOC);
+    ", [':since' => $since, ':until' => $until, ':since2' => $since, ':until2' => $until,
+        ':since_c' => $since, ':until_c' => $until, ':from_d' => $from, ':to_d' => $to])->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Needs a few tasks before a tendency means anything.
@@ -148,7 +199,7 @@ $OUTCOMES = [
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h4 class="fw-bold mb-0">Analytics</h4>
-            <small class="text-muted">How tasks get done — <?= htmlspecialchars($subject_name) ?>, <?= strtolower($RANGES[$days]) ?></small>
+            <small class="text-muted">How tasks get done — <?= htmlspecialchars($subject_name) ?>, <?= $range_phrase ?></small>
         </div>
         <?php if ($target): // a tendency describes one person, not everyone combined ?>
         <span class="badge <?= $t_class ?> px-3 py-2" title="Tendency">
@@ -158,9 +209,10 @@ $OUTCOMES = [
     </div>
 
     <!-- Filters: one row, above every chart -->
-    <form method="GET" class="d-flex flex-wrap align-items-center gap-2 mb-4">
+    <form method="GET" class="d-flex flex-wrap align-items-center gap-2 <?= $range_note ? 'mb-2' : 'mb-4' ?>" onsubmit="return CHECK_RANGE(this);">
         <input type="hidden" name="page" value="analytics">
-        <input type="hidden" name="range" value="<?= $days ?>">
+        <?php // Changing the user keeps the current range; the Apply button below switches to range=custom ?>
+        <input type="hidden" name="range" value="<?= $is_custom ? 'custom' : $range ?>">
 
         <?php if ($is_admin): ?>
         <select name="user" class="form-select form-select-sm" style="max-width:240px;" onchange="this.form.submit();" aria-label="User">
@@ -173,13 +225,26 @@ $OUTCOMES = [
         </select>
         <?php endif; ?>
 
-        <div class="btn-group btn-group-sm" role="group" aria-label="Date range">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Quick ranges">
             <?php foreach ($RANGES as $r => $label): ?>
                 <a href="main.php?page=analytics&range=<?= $r ?><?= $target && $is_admin ? '&user=' . $target : '' ?>"
-                   class="btn <?= $r === $days ? 'btn-dark' : 'btn-outline-dark' ?>"><?= $label ?></a>
+                   class="btn <?= $r === $range ? 'btn-dark' : 'btn-outline-dark' ?>"><?= $label ?></a>
             <?php endforeach; ?>
         </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2 date-range" role="group" aria-label="Custom date range">
+            <input type="date" name="from" id="RANGE_FROM" class="form-control form-control-sm"
+                   value="<?= $from ?>" max="<?= $today ?>" aria-label="From date" required>
+            <span class="small text-muted">to</span>
+            <input type="date" name="to" id="RANGE_TO" class="form-control form-control-sm"
+                   value="<?= $to ?>" max="<?= $today ?>" aria-label="To date" required>
+            <button type="submit" name="range" value="custom"
+                    class="btn btn-sm <?= $is_custom ? 'btn-dark' : 'btn-outline-dark' ?>">Apply</button>
+        </div>
     </form>
+    <?php if ($range_note): ?>
+        <p class="small text-muted mb-4"><i class="lni lni-calendar-days me-1"></i><?= htmlspecialchars(trim($range_note)) ?></p>
+    <?php endif; ?>
 
     <!-- Stat tiles -->
     <div class="row g-3 mb-4">
@@ -246,10 +311,10 @@ $OUTCOMES = [
             <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-body">
                     <h6 class="fw-bold mb-0">Task outcomes</h6>
-                    <small class="text-muted d-block mb-3">What happened to the <?= $total ?> task<?= $total === 1 ? '' : 's' ?> made in this period</small>
+                    <small class="text-muted d-block mb-3">What happened to the <?= $total ?> task<?= $total === 1 ? '' : 's' ?> made, due or finished in this period</small>
 
                     <?php if ($total === 0): ?>
-                        <p class="text-muted small mb-0">No tasks were made in this period.</p>
+                        <p class="text-muted small mb-0">No tasks were made, due or finished in this period.</p>
                     <?php else: foreach ($OUTCOMES as [$label, $n, $color, $icon]):
                         $share = round($n / $total * 100); ?>
                         <div class="mb-3">
@@ -274,7 +339,7 @@ $OUTCOMES = [
                 <div class="card-body">
                     <h6 class="fw-bold mb-0">Daily usage</h6>
                     <small class="text-muted d-block mb-1">
-                        Actions per day (sign-ins, task and profile changes) — active on <?= $active_days ?> of <?= $days ?> days
+                        Actions per day (sign-ins, task and profile changes) — active on <?= $active_days ?> of <?= $days ?> day<?= $days === 1 ? '' : 's' ?>
                     </small>
                     <div class="chart-box"><canvas id="CHART_USAGE" role="img" aria-label="Bar chart of actions per day"></canvas></div>
                     <details class="mt-2 small">
@@ -307,7 +372,7 @@ $OUTCOMES = [
             <div class="p-3 p-md-4 pb-3 pb-md-3">
                 <h6 class="fw-bold mb-0">User tendencies</h6>
                 <small class="text-muted">
-                    Based on tasks made <?= strtolower($RANGES[$days]) ?>. A tendency needs at least 3 tasks.
+                    Based on tasks made, due or finished <?= $range_phrase ?>. A tendency needs at least 3 tasks.
                 </small>
             </div>
             <div class="table-responsive">
@@ -315,7 +380,7 @@ $OUTCOMES = [
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">User</th>
-                            <th class="text-end">Tasks made</th>
+                            <th class="text-end">Tasks</th>
                             <th class="text-end">Completed</th>
                             <th class="text-end">Completed late</th>
                             <th class="text-end">Overdue</th>
@@ -335,12 +400,12 @@ $OUTCOMES = [
                     ?>
                         <tr>
                             <td class="ps-4">
-                                <a href="main.php?page=analytics&range=<?= $days ?>&user=<?= (int)$u['id'] ?>" class="fw-semibold text-dark">
+                                <a href="main.php?page=analytics&<?= $range_qs ?>&user=<?= (int)$u['id'] ?>" class="fw-semibold text-dark">
                                     <?= htmlspecialchars($name) ?>
                                 </a>
                                 <div class="small text-muted"><?= htmlspecialchars($u['username']) ?></div>
                             </td>
-                            <td data-label="Tasks made" class="text-end"><?= $ut ?></td>
+                            <td data-label="Tasks" class="text-end"><?= $ut ?></td>
                             <td data-label="Completed" class="text-end"><?= $uc ?> <span class="text-muted small">(<?= $fmt_pct($pct($uc, $ut)) ?>)</span></td>
                             <td data-label="Completed late" class="text-end"><?= (int)$u['late'] ?></td>
                             <td data-label="Overdue" class="text-end"><?= (int)$u['overdue'] ?></td>
@@ -371,6 +436,7 @@ $OUTCOMES = [
 .analytics .meter       { height: 6px; background: #f0f0ee; border-radius: 3px; overflow: hidden; }
 .analytics .meter-fill  { height: 100%; border-radius: 3px; }
 .analytics .data-table  { max-height: 240px; overflow-y: auto; }
+.analytics .date-range input { width: 9.5rem; }
 .analytics details summary { cursor: pointer; }
 @media (max-width: 575.98px) {
     .analytics .stat-value { font-size: 1.5rem; }
@@ -378,7 +444,7 @@ $OUTCOMES = [
 }
 </style>
 
-<script src="assets/plugins/chartjs/chart.min.js"></script>
+<script src="<?= asset('assets/plugins/chartjs/chart.min.js') ?>"></script>
 <script>
 (function () {
     const SERIES = <?= json_encode($series, JSON_HEX_TAG) ?>;
@@ -406,7 +472,7 @@ $OUTCOMES = [
     };
 
     const fullDate = i => new Date(SERIES[i].date + 'T00:00:00')
-        .toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        .toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
     const baseOptions = {
         maintainAspectRatio: false,
@@ -476,4 +542,15 @@ $OUTCOMES = [
         }
     });
 })();
+
+// Custom range: the start can't come after the end
+function CHECK_RANGE(form) {
+    const FROM = form.querySelector('#RANGE_FROM').value;
+    const TO   = form.querySelector('#RANGE_TO').value;
+    if (FROM && TO && FROM > TO) {
+        Swal.fire({ icon: 'warning', title: 'Check the dates', text: 'The start date must be on or before the end date.', confirmButtonColor: '#212529' });
+        return false;
+    }
+    return true;
+}
 </script>

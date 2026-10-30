@@ -111,4 +111,4 @@ $settings_tab = 'security';
     </div>
 </div>
 
-<script src="pages/settings/script.js"></script>
+<script src="<?= asset('pages/settings/script.js') ?>"></script>

@@ -122,4 +122,4 @@ $avatar_url = fn($u) => !empty($u['avatar']) && is_file('uploads/avatars/' . $u[
     </div>
 </div>
 
-<script src="pages/users/script.js"></script>
+<script src="<?= asset('pages/users/script.js') ?>"></script>

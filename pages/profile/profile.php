@@ -179,4 +179,4 @@ $avatar_src = $avatar_url($user);
         </div>
     </div>
 </div>
-<script src="pages/profile/script.js"></script>
+<script src="<?= asset('pages/profile/script.js') ?>"></script>

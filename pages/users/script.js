@@ -41,11 +41,12 @@ function RESET_PASSWORD(USER_ID, NAME) {
     });
 }
 
-function SHOW_TEMP_PASSWORD(USERNAME, PASSWORD) {
+// Also used by Create Account (pages/create_account/script.js) to show the generated password
+function SHOW_TEMP_PASSWORD(USERNAME, PASSWORD, TITLE = "Password Reset") {
     let esc = s => $("<div>").text(s).html();
 
-    Swal.fire({
-        title: "Password Reset",
+    return Swal.fire({
+        title: TITLE,
         icon: "success",
         html: `
             <p class="small text-muted mb-3">Give these details to the user. They will be asked to set a new password when they log in.</p>
@@ -60,7 +61,7 @@ function SHOW_TEMP_PASSWORD(USERNAME, PASSWORD) {
                     </button>
                 </div>
             </div>
-            <p class="small text-danger mt-3 mb-0">This password won't be shown again.</p>`,
+          <!--  <p class="small text-danger mt-3 mb-0">This password won't be shown again.</p> -->`,
         confirmButtonText: "Done",
         confirmButtonColor: "#212529",
         allowOutsideClick: false,

@@ -34,4 +34,11 @@ function set_flash($type, $message) {
     $_SESSION['flash'] = ['type' => $type, 'message' => $message];
 }
 
+// URL for a local JS/CSS file (path relative to the app root) that changes whenever the file
+// does, so browsers fetch the new version instead of running a cached old one.
+function asset($path) {
+    $file = __DIR__ . '/../' . $path;
+    return $path . (is_file($file) ? '?v=' . filemtime($file) : '');
+}
+
 ?>

@@ -1,11 +1,12 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 include_once 'db/db.php';
+include_once 'includes/tasks.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit(); }
 
 $user_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("
-    SELECT id, title, priority, status, due_date
+    SELECT id, parent_id, title, priority, status, start_date, due_date, repeat_type, created_at
     FROM tbl_tasks
     WHERE user_id = ? AND is_deleted = 0 AND due_date IS NOT NULL
     ORDER BY due_date, FIELD(priority,'High','Medium','Low')
@@ -14,7 +15,11 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $tasks  = [];
-while ($row = $result->fetch_assoc()) { $tasks[] = $row; }
+while ($row = $result->fetch_assoc()) {
+    // past days of a repeating task are read-only
+    $tasks[] = ['id' => $row['id'], 'title' => $row['title'], 'priority' => $row['priority'],
+                'status' => $row['status'], 'due_date' => $row['due_date'], 'locked' => day_locked($row)];
+}
 $tasks_json = json_encode($tasks, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
 ?>
 
@@ -218,6 +223,7 @@ window.CAL = (function () {
         return `<div class="task-check-item" id="row-${t.id}">
             <input type="checkbox" class="form-check-input mt-1"
                    ${t.status === 'Completed' ? 'checked' : ''}
+                   ${t.locked ? 'disabled title="This day has passed"' : ''}
                    onchange="CAL.toggle(${t.id}, this.checked)">
             <div class="flex-grow-1 overflow-hidden">
                 <div class="small fw-semibold text-truncate ${t.status === 'Completed' ? 'task-title-done' : ''}"
@@ -493,7 +499,11 @@ window.CAL = (function () {
         })
         .then(r => r.json())
         .then(res => {
-            if (!res.ok) return;
+            if (!res.ok) {
+                Swal.fire('Error', res.error || 'Could not update the status.', 'error');
+                render();   // put the checkbox back
+                return;
+            }
 
             /* Update in-memory task */
             const task = TASKS.find(x => x.id == taskId);

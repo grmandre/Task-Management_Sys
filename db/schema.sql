@@ -25,6 +25,7 @@ CREATE TABLE `tbl_account` (
                                   NOT NULL DEFAULT 'User',
     `status`     ENUM('Active','Inactive','Disabled')
                                   NOT NULL DEFAULT 'Active',
+    `default_password` VARCHAR(255) NULL DEFAULT NULL,     -- generated temp password shown to admins; cleared once the user sets their own
     `must_change_password` TINYINT(1) NOT NULL DEFAULT 0,  -- set when an admin resets the password
     `last_login` TIMESTAMP        NULL     DEFAULT NULL,
     `created_at` TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,

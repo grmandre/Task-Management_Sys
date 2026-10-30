@@ -13,8 +13,6 @@ function SUBMIT_BTN() {
     let MOBILE_NO = $("#MOBILE_NUM").val().trim();
     let ROLE     = $("#ROLE").val();
     let UNAME    = $("#USERNAME").val().trim();
-    let PWORD    = $("#PASSWORD").val();
-    let CPWORD   = $("#CONFIRM_PASSWORD").val();
     let AVT      = $("#AVATAR").prop('files')[0];
 
     if (!LNAME || !FNAME) {
@@ -56,17 +54,6 @@ function SUBMIT_BTN() {
         return;
     }
 
-    // Password is required for new accounts; when editing, blank means "keep current password".
-    if ((!IS_EDIT || PWORD) && PWORD.length < 6) {
-        Swal.fire("Error", "Password must be at least 6 characters.", "warning");
-        return;
-    }
-
-    if (PWORD !== CPWORD) {
-        Swal.fire("Error", "Passwords do not match.", "warning");
-        return;
-    }
-
     Swal.fire({
         title: IS_EDIT ? "Save Changes" : "Confirm Submission",
         text: IS_EDIT ? "Update this user's information?" : "Create this account?",
@@ -90,7 +77,6 @@ function SUBMIT_BTN() {
         FD.append("MOBILE_NUM",  MOBILE_NO);
         FD.append("ROLE",        ROLE);
         FD.append("USERNAME",    UNAME);
-        FD.append("PASSWORD",    PWORD);
         if (AVT) FD.append("AVATAR", AVT);
 
         let xhr = new XMLHttpRequest();
@@ -110,7 +96,11 @@ function SUBMIT_BTN() {
             catch (e) { Swal.fire("Error", "Unexpected server response.", "error"); return; }
 
             if (res.status === "success") {
-                Swal.fire("Success", res.message, "success").then(() => {
+                // New accounts get a generated password — show it so the admin can hand it over.
+                let DONE = res.password
+                    ? SHOW_TEMP_PASSWORD(res.username, res.password, "Account Created")
+                    : Swal.fire("Success", res.message, "success");
+                DONE.then(() => {
                     window.location.href = "main.php?page=users";
                 });
             } else {

@@ -202,44 +202,16 @@ $avatar_src = $acct && !empty($acct['avatar']) && is_file('uploads/avatars/' . $
                         </div>
 
                         <div class="bg-light p-3 rounded-3 mb-4">
-                            <h6 class="fw-bold mb-1"><?= $IS_EDIT ? 'Reset Password' : 'Password' ?></h6>
-                            <?php if ($IS_EDIT): ?>
-                                <small class="text-muted d-block mb-3">Leave blank to keep the user's current password.</small>
-                            <?php else: ?>
-                                <div class="mb-2"></div>
-                            <?php endif; ?>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label small"><?= $IS_EDIT ? 'New Password' : 'Password <span class="text-danger">*</span>' ?></label>
-                                    <div class="password-field">
-                                        <input type="password"
-                                               name="password"
-                                               class="form-control"
-                                               id="PASSWORD"
-                                               autocomplete="new-password"
-                                               placeholder="Minimum 6 characters"
-                                               minlength="6">
-                                        <button type="button" class="password-eye" onclick="TOGGLE_PASSWORD(this);"
-                                                title="Show password" aria-label="Show password" aria-pressed="false">
-                                            <i class="lni lni-eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small"><?= $IS_EDIT ? 'Confirm New Password' : 'Confirm Password <span class="text-danger">*</span>' ?></label>
-                                    <div class="password-field">
-                                        <input type="password"
-                                               class="form-control"
-                                               id="CONFIRM_PASSWORD"
-                                               autocomplete="new-password"
-                                               placeholder="Re-enter password">
-                                        <button type="button" class="password-eye" onclick="TOGGLE_PASSWORD(this);"
-                                                title="Show password" aria-label="Show password" aria-pressed="false">
-                                            <i class="lni lni-eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            <h6 class="fw-bold mb-1">Password</h6>
+                            <small class="text-muted d-block">
+                                <i class="lni lni-locked-2 me-1"></i>
+                                <?php if ($IS_EDIT): ?>
+                                    To give this user a new password, use <strong>Reset Password</strong> on the Users list.
+                                <?php else: ?>
+                                    A temporary password will be generated when the account is created.
+                                    The user will be asked to set their own password at first login.
+                                <?php endif; ?>
+                            </small>
                         </div>
 
                         <div class="d-grid gap-2">
@@ -263,5 +235,6 @@ $avatar_src = $acct && !empty($acct['avatar']) && is_file('uploads/avatars/' . $
     </div>
 </div>
 
-<script src="pages/profile/script.js"></script>
-<script src="pages/create_account/script.js"></script>
+<script src="<?= asset('pages/profile/script.js') ?>"></script>
+<script src="<?= asset('pages/users/script.js') ?>"></script>
+<script src="<?= asset('pages/create_account/script.js') ?>"></script>

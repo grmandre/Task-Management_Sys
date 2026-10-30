@@ -9,9 +9,17 @@ function SET_STATUS(TASK_ID, STATUS) {
         .then(r => r.json())
         .then(res => {
             if (res.ok) window.location.reload();
-            else Swal.fire("Error", "Could not update the status.", "error");
+            else Swal.fire("Error", res.error || "Could not update the status.", "error");
         })
         .catch(() => Swal.fire("Error", "Server error occurred.", "error"));
+}
+
+// Tick / untick one day of a repeating task
+function CHECKIN(TASK_ID, DATE, DONE) {
+    TASK_ACTION({ ACTION: 10, TASK_ID, DATE, DONE: DONE ? 1 : 0 }).then(res => {
+        if (res.status === "success") window.location.reload();
+        else Swal.fire("Error", res.message, "error");
+    });
 }
 
 function TOGGLE_ITEM(ITEM_ID, DONE) {
